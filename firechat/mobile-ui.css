@@ -1,0 +1,897 @@
+/* =================================================================
+   MOBILE UI MODULE (SynqX Mobile Style)
+   ================================================================= */
+
+/* FIX: Disable hover states on touch devices to prevent double-tap issue */
+@media (hover: none) and (pointer: coarse) {
+
+    /* Remove hover delays for all clickable elements */
+    *,
+    *::before,
+    *::after {
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Make hover same as normal state for buttons and links */
+
+
+    /* Force pointer cursor and touch-action */
+    button,
+    a,
+    [onclick],
+    .clickable,
+    .contact-item,
+    .sidebar-icon,
+    .mobile-nav-item,
+    .mobile-editor-btn,
+    .msg-opt-item {
+        cursor: pointer;
+        touch-action: manipulation;
+        /* Removes 300ms delay */
+    }
+}
+
+/* Universal touch optimization */
+html {
+    touch-action: manipulation;
+    /* Disable double-tap zoom globally */
+    height: 100%;
+}
+
+body {
+    /* Make body taller than viewport to allow scrolling which hides the URL bar */
+    min-height: 110vh;
+    margin: 0;
+    position: relative;
+    width: 100%;
+    overscroll-behavior-y: none;
+}
+
+@media (max-width: 768px) {
+
+    /* 1. HIDE DESKTOP SIDEBAR */
+    .chat-sidebar {
+        display: none !important;
+    }
+
+    /* 2. MAKE CONTACTS LIST FULL WIDTH */
+    .chat-app {
+        display: block !important;
+        position: fixed !important;
+        /* Keep app fixed while body scrolls */
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 100% !important;
+        /* Adapt to visible viewport */
+        width: 100% !important;
+        overflow: hidden !important;
+        z-index: 10;
+        background: var(--bg-app, #0a0e27);
+    }
+
+
+    .chat-contacts {
+        display: flex !important;
+        flex-direction: column;
+        width: 100% !important;
+        height: 100% !important;
+        /* Reserve space for bottom nav */
+        padding-bottom: 60px !important;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 50 !important;
+        border-right: none !important;
+        background: var(--bg-sidebar);
+    }
+
+    /* 3. CHAT VIEW (Slide-in Overlay) */
+    #chat-main-header {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 60px !important;
+        z-index: 5001 !important;
+        transform: translateX(100%);
+        transition: transform 0.3s cubic-bezier(0.1, 0.82, 0.25, 1);
+        background: var(--bg-header, #202c33) !important;
+        display: flex !important;
+    }
+
+    #messages-container {
+        position: fixed !important;
+        top: 60px !important;
+        bottom: 60px !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        z-index: 5000 !important;
+        /* Ensure it covers contacts */
+        display: flex !important;
+        flex-direction: column;
+        transform: translateX(100%);
+        transition: transform 0.3s cubic-bezier(0.1, 0.82, 0.25, 1);
+        background: var(--bg-chat, #0b141a) !important;
+        /* Force solid background */
+        padding-bottom: 10px;
+    }
+
+    #chat-input-area {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 60px !important;
+        z-index: 5001 !important;
+        transform: translateX(100%);
+        transition: transform 0.3s cubic-bezier(0.1, 0.82, 0.25, 1);
+        background: var(--bg-header) !important;
+    }
+
+    /* Active State for Chat View */
+    body.mobile-chat-active #chat-main-header,
+    body.mobile-chat-active #messages-container,
+    body.mobile-chat-active #chat-input-area {
+        transform: translateX(0);
+    }
+
+    /* Hide Bottom Nav when Chat is Active */
+    body.mobile-chat-active .mobile-bottom-nav {
+        display: none !important;
+    }
+
+    /* Back Button Styling */
+    .mobile-back-btn {
+        display: flex !important;
+        margin-right: 8px;
+        padding: 8px;
+        border-radius: 50%;
+        cursor: pointer;
+        color: var(--text-secondary);
+    }
+
+    .mobile-back-btn:active {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Adjust Header for Back Button */
+    /* Adjust Header for Back Button & Spacing */
+    .header-title>div {
+        gap: 0px !important;
+        /* Reduce gap between arrow and avatar */
+    }
+
+    #chat-header-avatar {
+        margin-left: -5px;
+        /* Pull avatar closer to arrow */
+        margin-right: 8px;
+    }
+
+    /* Header Actions: Space efficiently */
+    .header-actions {
+        gap: 0px !important;
+    }
+
+    .header-btn {
+        padding: 8px !important;
+        /* Smaller touch targets visually but kept accessible */
+    }
+
+    /* Hide standard Info Button on Mobile (moved to menu) */
+    .header-btn[title="Contact info"] {
+        display: none !important;
+    }
+
+    /* Fix Menu Dropdown Z-Index & Positioning on Mobile */
+    #chat-header-menu {
+        position: fixed !important;
+        top: 50px !important;
+        right: 10px !important;
+        z-index: 7000 !important;
+        /* Highest */
+        background: var(--bg-header, #202c33) !important;
+        width: 200px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Hide the "Welcome Screen" on mobile since changing views is explicit */
+    #welcome-screen {
+        display: none !important;
+    }
+
+    /* Make active chat messages fully opaque background */
+    .chat-messages {
+        background-color: var(--bg-chat, #0b141a);
+    }
+
+    /* MODALS ON MOBILE */
+    /* Ensure sidebars cover 100% width on mobile */
+    .sidebar-panel {
+        width: 100% !important;
+        padding-bottom: 60px;
+        /* Space for nav */
+        z-index: 6000 !important;
+        /* Above chat view */
+    }
+
+    /* INFO PANEL ON MOBILE */
+    #info-panel {
+        position: fixed !important;
+        top: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        height: 100vh !important;
+        z-index: 6000 !important;
+        /* Above everything */
+        background: var(--bg-app, #0b141a) !important;
+        border-left: none !important;
+        display: none;
+        /* Managed by JS toggle */
+        flex-direction: column;
+    }
+
+    #info-panel[style*="display: block"],
+    #info-panel[style*="display: flex"] {
+        display: flex !important;
+    }
+
+    /* EMOJI PICKER ON MOBILE */
+    .emoji-picker {
+        position: fixed !important;
+        bottom: 70px !important;
+        /* Above input bar */
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        height: 55vh !important;
+        /* Increased height */
+        max-height: 500px !important;
+        border-radius: 20px 20px 0 0 !important;
+        z-index: 6000 !important;
+        /* Above everything */
+        top: auto !important;
+        transform: translate(0, 0) !important;
+        box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.5) !important;
+    }
+
+    /* Close button for Emoji Picker on Mobile */
+    .emoji-mobile-close {
+        display: flex !important;
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        color: #fff;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+    }
+
+    /* -----------------------------------------------------------
+       BOTTOM NAVIGATION BAR
+       ----------------------------------------------------------- */
+    .mobile-bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 60px;
+        background: var(--bg-header);
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        /* Flex by default */
+        justify-content: space-around;
+        align-items: center;
+        z-index: 6001;
+        /* Highest */
+    }
+
+    .mobile-nav-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: #8696a0;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .mobile-nav-item.active {
+        color: var(--accent);
+    }
+
+    .mobile-nav-item i {
+        font-size: 24px;
+        margin-bottom: 2px;
+    }
+
+    .mobile-nav-item span {
+        font-size: 10px;
+        font-weight: 500;
+    }
+
+    /* IMAGE EDITOR ON MOBILE - Hide the original panel, use #mobile-image-editor instead */
+    .image-editor-panel {
+        display: none !important;
+    }
+}
+
+/* =================================================================
+   SEPARATE MOBILE IMAGE EDITOR PANEL
+   This is a standalone panel that sits directly on body
+   ================================================================= */
+.mobile-image-editor {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    z-index: 999999;
+    display: flex;
+    flex-direction: column;
+}
+
+.mobile-editor-header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 10px;
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.mobile-editor-btn {
+    background: none;
+    border: none;
+    color: #aebac1;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-editor-btn:active {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.mobile-editor-btn i {
+    font-size: 24px;
+}
+
+.mobile-editor-tools {
+    display: flex;
+    gap: 4px;
+}
+
+.mobile-editor-done {
+    background: #00a884;
+    border: none;
+    color: #fff;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.mobile-editor-preview {
+    flex: 1 1 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    background: #000;
+    padding: 10px;
+    min-height: 0;
+}
+
+.mobile-editor-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.mobile-editor-footer {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 10px 20px 10px;
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.mobile-editor-caption-wrap {
+    flex: 1;
+}
+
+.mobile-editor-caption-wrap input {
+    width: 100%;
+    background: #2a3942;
+    border: none;
+    border-radius: 20px;
+    padding: 12px 16px;
+    color: #e9edef;
+    font-size: 14px;
+    outline: none;
+}
+
+.mobile-editor-caption-wrap input::placeholder {
+    color: #8696a0;
+}
+
+.mobile-editor-send {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #00a884;
+    border: none;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.mobile-editor-send i {
+    font-size: 22px;
+}
+
+/* =================================================================
+   IMAGE PREVIEW MODAL (When clicking shared images in chat)
+   ================================================================= */
+.image-preview-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+.image-preview-modal img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Close hint */
+.image-preview-modal::after {
+    content: 'Tap to close';
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 14px;
+    pointer-events: none;
+}
+
+/* =================================================================
+   PROFILE PICTURE PREVIEW MODAL
+   ================================================================= */
+.profile-preview-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0);
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+    transition: background 0.3s ease;
+}
+
+.profile-preview-modal.active {
+    background: rgba(0, 0, 0, 0.95);
+}
+
+.profile-preview-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    transform: scale(0.8);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.profile-preview-modal.active .profile-preview-content {
+    transform: scale(1);
+    opacity: 1;
+}
+
+/* Profile Preview Header */
+.profile-preview-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10;
+    gap: 8px;
+}
+
+.profile-preview-close {
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: transparent;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 50%;
+    touch-action: manipulation;
+}
+
+.profile-preview-close:active {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.profile-preview-close i {
+    font-size: 24px;
+}
+
+.profile-preview-name {
+    font-size: 18px;
+    font-weight: 500;
+    color: #fff;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Profile Preview Content */
+.profile-preview-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    padding-top: 76px;
+    /* Account for header */
+}
+
+.profile-preview-image-container {
+    max-width: 90vw;
+    max-height: 70vh;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.profile-preview-image-container img {
+    max-width: 100%;
+    max-height: 70vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+}
+
+/* Make contact avatars clickable */
+.contact-avatar {
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+/* =================================================================
+   Mobile Chat Input Enhanced Styles
+   ================================================================= */
+
+
+/* Main Input Container */
+#chat-input-area[data-mobile-enhanced="true"] {
+    display: flex;
+    flex-direction: row !important;
+    align-items: flex-end !important;
+    padding: 6px 4px 6px 4px !important;
+    gap: 6px !important;
+    background: transparent !important;
+    /* User requested transparent input div */
+    min-height: auto !important;
+}
+
+/* 1. Attach Button (+) */
+.mobile-attach-btn {
+    background: transparent !important;
+    color: #8696a0 !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: none !important;
+    margin-bottom: 2px !important;
+    padding: 0 !important;
+}
+
+/* 2. Input Pill Wrapper */
+#chat-input-area[data-mobile-enhanced="true"] .input-wrapper {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    background: var(--bg-header, #2a3942) !important;
+    /* Use Header color for Pill (f0f2f5 light, 2a3942 dark fallback) */
+    border-radius: 24px !important;
+    padding: 4px 12px 4px 6px !important;
+    min-height: 44px !important;
+    margin: 0 !important;
+    /* Ensure proper spacing for multiline */
+    align-items: flex-end !important;
+}
+
+/* Icon Buttons inside Pill (Emoji) */
+#chat-input-area[data-mobile-enhanced="true"] .input-wrapper .input-btn {
+    padding: 8px !important;
+    margin: 0 !important;
+    color: #8696a0 !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: transparent !important;
+    margin-bottom: 2px !important;
+    /* Align with text bottom */
+}
+
+/* Textarea */
+#chat-input-area[data-mobile-enhanced="true"] .message-input {
+    flex: 1 !important;
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-primary, #d1d7db) !important;
+    padding: 10px 8px 10px 8px !important;
+    min-height: 24px !important;
+    max-height: 120px !important;
+    font-size: 16px !important;
+    line-height: 20px !important;
+    margin: 0 !important;
+    resize: none !important;
+}
+
+/* 3. Send/Mic Button */
+#chat-input-area[data-mobile-enhanced="true"] .send-btn,
+#chat-input-area[data-mobile-enhanced="true"] .mic-btn {
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    border-radius: 50% !important;
+    background: #00a884 !important;
+    color: #fff !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin-bottom: 0px !important;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+#chat-input-area[data-mobile-enhanced="true"] .send-btn:active {
+    transform: scale(0.9);
+}
+
+/* Hide the old input actions container which might be empty */
+#chat-input-area[data-mobile-enhanced="true"] .input-actions {
+    display: none !important;
+}
+
+/* Hide the desktop file input if present */
+#chat-input-area[data-mobile-enhanced="true"] #file-input {
+    display: none !important;
+}
+
+/* Adjustments for icons */
+.mobile-attach-btn i,
+.input-wrapper .input-btn i {
+    font-size: 24px !important;
+}
+
+/* Fix for URL/Reply Previews in Flex Container */
+#chat-input-area[data-mobile-enhanced="true"] .url-preview-panel,
+#chat-input-area[data-mobile-enhanced="true"] .reply-preview-panel {
+    position: absolute !important;
+    bottom: 100% !important;
+    left: 0 !important;
+    width: 100% !important;
+    z-index: 10 !important;
+    margin-bottom: 0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: var(--bg-header, #202c33) !important;
+}
+
+/* Calls Panel Fix for Mobile (Sidebar Panel Structure) */
+@media (max-width: 768px) {
+    #calls-modal {
+        /* Align with other sidebar panels */
+        display: none;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        background: var(--bg-app, #0a0e27) !important;
+        z-index: 2000 !important;
+        padding: 0 !important;
+    }
+
+    #calls-modal.active {
+        display: flex !important;
+        /* Make visible when active */
+        flex-direction: column;
+    }
+
+    #calls-modal .sidebar-panel-content {
+        width: 100% !important;
+        flex: 1;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        background: var(--bg-sidebar, #111b21) !important;
+        box-shadow: none !important;
+        display: flex;
+        flex-direction: column;
+        padding: 0 !important;
+        overflow: hidden;
+    }
+
+    /* Header Styling specific to calls if needed, otherwise inherit sidebar-panel-header */
+    #calls-modal .sidebar-panel-header {
+        background: var(--bg-header, #202c33) !important;
+        color: var(--text-primary, #e9edef);
+        padding: 10px 16px !important;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        flex-shrink: 0;
+    }
+
+    #calls-list {
+        flex: 1;
+        max-height: none !important;
+        overflow-y: auto !important;
+        padding: 10px 10px 80px 10px !important;
+    }
+
+    .call-item {
+        padding: 12px 16px !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+}
+
+/* Calls Panel Desktop Styles (Detailed) */
+@media (min-width: 769px) {
+    #calls-modal {
+        position: fixed;
+        top: 0;
+        left: -450px !important;
+        /* Start Hidden */
+        width: 380px;
+        /* Standard Panel Width (matches New Chat) */
+        height: 100%;
+        background: var(--bg-sidebar, #111b21);
+        z-index: 10;
+        /* Lower than Sidebar */
+        transition: left 0.3s cubic-bezier(0.1, 0.82, 0.25, 1);
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    }
+
+    #calls-modal.active {
+        left: 64px !important;
+        /* Force sidebar visibility */
+    }
+
+    #calls-modal .sidebar-panel-header {
+        /* Standard Header Height */
+        background: var(--bg-header, #202c33);
+        display: flex;
+        align-items: center;
+        /* Center vertically */
+        padding: 0 16px;
+        box-sizing: border-box;
+        color: var(--text-primary, #e9edef);
+        font-size: 16px;
+        /* Standard font size */
+        font-weight: 500;
+    }
+
+    #calls-modal .sidebar-panel-header i {
+        margin-right: 20px;
+        cursor: pointer;
+        /* Remove margin-bottom as we are centered now */
+        margin-bottom: 0;
+    }
+
+    #calls-modal .sidebar-panel-content {
+        flex: 1;
+        overflow-y: auto;
+    }
+}
+
+/* =================================================================
+   FIX POPUP MODALS ON MOBILE (Delete, Forward, etc)
+   ================================================================= */
+.modal:not(.sidebar-panel) {
+    z-index: 9000 !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Ensure centering when active */
+.modal:not(.sidebar-panel)[style*="display: block"],
+.modal:not(.sidebar-panel)[style*="display: flex"] {
+    display: flex !important;
+}
+
+.modal:not(.sidebar-panel) .modal-content {
+    background: var(--bg-sidebar, #111b21) !important;
+    border-radius: 12px !important;
+    width: 90% !important;
+    max-width: 320px !important;
+    margin: auto !important;
+    position: relative !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+    padding: 24px !important;
+    animation: modalPopIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes modalPopIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}

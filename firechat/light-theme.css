@@ -1,0 +1,714 @@
+/* Light Theme Overrides */
+body.light-theme {
+    --bg-app: #f0f2f5;
+    --bg-sidebar: #ffffff;
+    --bg-header: #f0f2f5;
+    --bg-chat: #efeae2;
+
+    --bubble-in: #ffffff;
+    --bubble-out: #d9fdd3;
+    --bubble-out-hover: #c9edd3;
+
+    --text-primary: #111b21;
+    --text-secondary: #667781;
+
+    color: var(--text-primary);
+}
+
+/* Main Elements */
+body.light-theme .chat-sidebar,
+body.light-theme .chat-contacts,
+body.light-theme .sidebar-panel {
+    background: var(--bg-sidebar);
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+body.light-theme .chat-header,
+body.light-theme .chat-input {
+    background: var(--bg-header);
+}
+
+body.light-theme .chat-messages {
+    background: var(--bg-chat);
+    background-image: linear-gradient(rgba(239, 234, 226, 0.96), rgba(239, 234, 226, 0.96)), url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+}
+
+/* Sidebar Panel Header */
+body.light-theme .sidebar-panel-header {
+    background: var(--bg-header);
+    color: var(--text-primary);
+}
+
+body.light-theme .sidebar-panel-header i {
+    color: var(--text-secondary);
+}
+
+/* Sidebar Panel Content */
+body.light-theme .sidebar-panel-content {
+    background: var(--bg-sidebar);
+}
+
+/* Settings Specific */
+body.light-theme .settings-section-title {
+    color: #00a884 !important;
+}
+
+body.light-theme .settings-item-wa {
+    color: var(--text-primary);
+}
+
+body.light-theme .settings-item-wa:hover {
+    background: #f5f6f6;
+}
+
+body.light-theme .settings-item-wa .t {
+    color: var(--text-primary);
+}
+
+body.light-theme .settings-item-wa .s {
+    color: var(--text-secondary);
+}
+
+body.light-theme .settings-item-wa i {
+    color: var(--text-secondary);
+}
+
+body.light-theme .settings-user-card {
+    background: var(--bg-sidebar);
+    border-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Profile Sections */
+body.light-theme .profile-section {
+    background: var(--bg-sidebar);
+}
+
+body.light-theme .profile-section .label {
+    color: #00a884;
+}
+
+body.light-theme .profile-section input,
+body.light-theme .profile-section .value-row {
+    color: var(--text-primary);
+}
+
+body.light-theme .profile-section .edit-icon {
+    color: var(--text-secondary);
+}
+
+body.light-theme .profile-section .info-text {
+    color: var(--text-secondary);
+}
+
+/* Messages */
+body.light-theme .message-container.received .message-bubble {
+    background: var(--bubble-in);
+    box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
+}
+
+body.light-theme .message-container.sent .message-bubble {
+    background: var(--bubble-out);
+}
+
+/* Contact Items */
+body.light-theme .contact-item {
+    border-color: rgba(0, 0, 0, 0.03);
+}
+
+body.light-theme .contact-item:hover,
+body.light-theme .contact-item.active {
+    background: #f5f6f6;
+}
+
+body.light-theme .contact-name {
+    color: var(--text-primary);
+}
+
+body.light-theme .contact-status {
+    color: var(--text-secondary);
+}
+
+/* Search and Input */
+body.light-theme .search-bar-container,
+body.light-theme .contacts-search,
+body.light-theme .input-wrapper {
+    background: #f0f2f5;
+    color: var(--text-primary);
+}
+
+body.light-theme .search-bar-container input,
+body.light-theme .contacts-search {
+    color: var(--text-primary);
+}
+
+body.light-theme .search-bar-container input::placeholder {
+    color: var(--text-secondary);
+}
+
+/* Chips */
+body.light-theme .chip {
+    background: #f0f2f5;
+    color: var(--text-secondary);
+}
+
+body.light-theme .chip.active {
+    background: rgba(0, 168, 132, 0.15);
+    color: #00a884;
+}
+
+/* Message Time */
+body.light-theme .message-time {
+    color: rgba(17, 27, 33, 0.6);
+}
+
+/* Dropdown and Context Menus */
+body.light-theme .dropdown-menu,
+body.light-theme .context-menu {
+    background: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+body.light-theme .menu-item,
+body.light-theme .context-menu-item {
+    color: var(--text-primary);
+}
+
+body.light-theme .menu-item:hover,
+body.light-theme .context-menu-item:hover {
+    background: #f5f6f6;
+}
+
+body.light-theme .menu-item i,
+body.light-theme .context-menu-item i {
+    color: var(--text-secondary);
+}
+
+/* User List Items */
+body.light-theme .user-list-item {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme .user-list-item:hover {
+    background: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 168, 132, 0.3);
+}
+
+/* Header and Titles */
+body.light-theme .header-title h1,
+body.light-theme .sidebar-panel-header div {
+    color: var(--text-primary);
+}
+
+body.light-theme .header-status {
+    color: var(--text-secondary);
+}
+
+/* Icons and Buttons */
+body.light-theme .icon-btn,
+body.light-theme .header-btn,
+body.light-theme .input-btn {
+    color: var(--text-secondary);
+}
+
+body.light-theme .icon-btn:hover,
+body.light-theme .header-btn:hover,
+body.light-theme .input-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-primary);
+}
+
+body.light-theme .sidebar-icon {
+    color: var(--text-secondary);
+}
+
+body.light-theme .sidebar-icon:hover,
+body.light-theme .sidebar-icon.active {
+    background: rgba(0, 0, 0, 0.1);
+    color: var(--text-primary);
+}
+
+/* Material Icons */
+body.light-theme .material-icons,
+body.light-theme .material-icons-outlined {
+    color: inherit;
+}
+
+/* Blocked Users */
+body.light-theme .blocked-user-item {
+    border-color: rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme .unblock-btn {
+    background: rgba(0, 0, 0, 0.1);
+    color: var(--text-primary);
+}
+
+body.light-theme .unblock-btn:hover {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+/* Message Tails - Light Theme */
+body.light-theme .message-container:not(.sent) .message-bubble::before {
+    border-bottom-color: var(--bubble-in);
+}
+
+body.light-theme .message-container.sent .message-bubble::before {
+    border-bottom-color: var(--bubble-out);
+}
+
+/* Loading Overlay */
+body.light-theme .loading-overlay {
+    background: rgba(240, 242, 245, 0.95);
+}
+
+body.light-theme .loader-content {
+    color: var(--text-primary);
+}
+
+body.light-theme .loader-footer {
+    color: var(--text-secondary);
+}
+
+/* Contact Menu Button */
+body.light-theme .contact-menu-btn {
+    background: var(--bg-sidebar);
+    box-shadow: -10px 0 10px var(--bg-sidebar);
+    color: var(--text-secondary);
+}
+
+body.light-theme .contact-menu-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: var(--text-primary);
+}
+
+/* Scrollbar Light Theme */
+body.light-theme ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+body.light-theme ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+/* Additional Light Theme Fixes */
+body.light-theme .search-bar-container {
+    background: #f0f2f5 !important;
+}
+
+body.light-theme .search-bar-container input {
+    background: transparent !important;
+    color: var(--text-primary) !important;
+}
+
+body.light-theme .search-bar-container input::placeholder {
+    color: var(--text-secondary) !important;
+    opacity: 0.7;
+}
+
+body.light-theme .search-bar-container i {
+    color: var(--text-secondary) !important;
+}
+
+body.light-theme .contacts-search {
+    background: #f0f2f5 !important;
+    color: var(--text-primary) !important;
+}
+
+body.light-theme .contacts-search::placeholder {
+    color: var(--text-secondary) !important;
+}
+
+body.light-theme .message-input {
+    color: var(--text-primary);
+}
+
+body.light-theme .message-input::placeholder {
+    color: var(--text-secondary);
+}
+
+body.light-theme .user-list-item {
+    color: var(--text-primary);
+}
+
+body.light-theme .contacts-header h1 {
+    color: var(--text-primary);
+}
+
+body.light-theme .blocked-user-item {
+    color: var(--text-primary);
+}
+
+body.light-theme .sidebar-panel input,
+body.light-theme .sidebar-panel textarea {
+    background: transparent;
+    color: var(--text-primary);
+}
+
+body.light-theme .sidebar-panel input::placeholder,
+body.light-theme .sidebar-panel textarea::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+body.light-theme #profile-modal .sidebar-panel-content>div {
+    background-color: #f0f2f5 !important;
+}
+
+body.light-theme .profile-section input {
+    background: transparent;
+}
+
+body.light-theme .modal-content {
+    background: rgba(255, 255, 255, 0.98);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme .btn-save {
+    background: #00a884;
+}
+
+body.light-theme .btn-cancel {
+    background: rgba(0, 0, 0, 0.08);
+    color: var(--text-primary);
+}
+
+/* Profile Avatar Container Light Theme */
+body.light-theme #profile-avatar-container {
+    background-color: #f0f2f5 !important;
+}
+
+/* Profile Sidebar Comprehensive Light Theme Fix */
+body.light-theme #profile-avatar-container {
+    background-color: #f0f2f5 !important;
+}
+
+body.light-theme .profile-section {
+    background: transparent;
+}
+
+body.light-theme .profile-section .label {
+    color: #00a884 !important;
+}
+
+body.light-theme .profile-section input {
+    color: #111b21 !important;
+    background: transparent !important;
+}
+
+body.light-theme .profile-section .info-text {
+    color: #667781 !important;
+}
+
+body.light-theme .profile-section .value-row {
+    color: #111b21;
+}
+
+body.light-theme .profile-section .edit-icon {
+    color: #8696a0 !important;
+}
+
+body.light-theme #profile-name-edit,
+body.light-theme #profile-about-edit {
+    color: #111b21 !important;
+}
+
+body.light-theme #profile-username-display,
+body.light-theme #profile-email-display {
+    color: #111b21 !important;
+}
+
+/* Profile Input Readonly State */
+.profile-section input[readonly] {
+    cursor: default;
+    opacity: 0.9;
+}
+
+.profile-section input:not([readonly]) {
+    cursor: text;
+    border-bottom: 1px solid #00a884;
+}
+
+.profile-section .edit-icon {
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.profile-section .edit-icon:hover {
+    color: #00a884 !important;
+    transform: scale(1.1);
+}
+
+/* Light theme edit icon hover */
+body.light-theme .profile-section .edit-icon:hover {
+    color: #00a884 !important;
+}
+
+/* Profile Emoji Button */
+.profile-emoji-btn {
+    cursor: pointer;
+    transition: 0.2s;
+    color: #8696a0 !important;
+}
+
+.profile-emoji-btn:hover {
+    color: #00a884 !important;
+    transform: scale(1.15);
+}
+
+body.light-theme .profile-emoji-btn {
+    color: #8696a0 !important;
+}
+
+body.light-theme .profile-emoji-btn:hover {
+    color: #00a884 !important;
+}
+
+/* Light Theme - Chats Header and Filters Fix */
+body.light-theme .contacts-header h1 {
+    color: #111b21 !important;
+}
+
+body.light-theme .chip {
+    background: #f0f2f5;
+    color: #667781;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme .chip.active {
+    background: #d1f4e0;
+    color: #00a884;
+    font-weight: 500;
+}
+
+body.light-theme .chip:hover {
+    background: #e8eaec;
+}
+
+/* Search bar in light theme */
+body.light-theme .contacts-search {
+    background: #f0f2f5 !important;
+    color: #111b21 !important;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+body.light-theme .contacts-search::placeholder {
+    color: #667781 !important;
+}
+
+/* Contact items in light theme */
+body.light-theme .contact-name {
+    color: #111b21 !important;
+}
+
+body.light-theme .contact-status,
+body.light-theme .contact-time {
+    color: #667781 !important;
+}
+
+/* Header icons in light theme */
+body.light-theme .contacts-header .icon-btn {
+    color: #54656f;
+}
+
+body.light-theme .contacts-header .icon-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #111b21;
+}
+
+/* Make chips clickable */
+.chip {
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s;
+}
+
+.chip:active {
+    transform: scale(0.95);
+}
+
+/* SynqX-Style Context Menu (Dropdown) */
+.context-menu {
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    min-width: 200px;
+    padding: 8px 0;
+    z-index: 10000;
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: background 0.15s;
+    color: #3b4a54;
+    font-size: 14.5px;
+}
+
+.context-menu-item:hover {
+    background: #f5f6f6;
+}
+
+.context-menu-item i {
+    color: #54656f;
+    font-size: 20px !important;
+}
+
+.context-menu-item.danger {
+    color: #d9001b;
+}
+
+.context-menu-item.danger i {
+    color: #d9001b;
+}
+
+/* Dark theme context menu */
+body:not(.light-theme) .context-menu {
+    background: #233138;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+body:not(.light-theme) .context-menu-item {
+    color: #e9edef;
+}
+
+body:not(.light-theme) .context-menu-item:hover {
+    background: #182229;
+}
+
+body:not(.light-theme) .context-menu-item i {
+    color: #8696a0;
+}
+
+body:not(.light-theme) .context-menu-item.danger {
+    color: #e74c3c;
+}
+
+body:not(.light-theme) .context-menu-item.danger i {
+    color: #e74c3c;
+}
+
+/* SynqX-Style Modal Buttons */
+.modal-content .btn-save,
+.modal-content button[type='button']:first-of-type {
+    background: #00a884 !important;
+    color: white !important;
+    border: none !important;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.modal-content .btn-save:hover {
+    background: #008f6e !important;
+}
+
+.modal-content .btn-cancel,
+.modal-content button[type='button']:last-of-type {
+    background: #f0f2f5 !important;
+    color: #3b4a54 !important;
+    border: none !important;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.modal-content .btn-cancel:hover {
+    background: #e5e7eb !important;
+}
+
+.modal-content h2 {
+    color: #111b21 !important;
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    -webkit-text-fill-color: unset !important;
+    font-size: 20px;
+    font-weight: 400;
+}
+
+/* Dark theme modal buttons */
+body:not(.light-theme) .modal-content h2 {
+    color: #e9edef !important;
+}
+
+body:not(.light-theme) .modal-content .btn-cancel {
+    background: #233138 !important;
+    color: #e9edef !important;
+}
+
+body:not(.light-theme) .modal-content .btn-cancel:hover {
+    background: #182229 !important;
+}
+
+/* Welcome/Empty State Text - Light Theme Fix */
+body.light-theme .welcome-text,
+body.light-theme .empty-state p,
+body.light-theme .empty-state-text {
+    color: #667781 !important;
+}
+
+body.light-theme .empty-state h3,
+body.light-theme .welcome-title {
+    color: #111b21 !important;
+}
+
+/* Empty state icon */
+body.light-theme .empty-state i,
+body.light-theme .welcome-icon {
+    color: #8696a0 !important;
+}
+
+/* Toggle Switch - Better OFF State Visibility */
+.toggle-switch input:not(:checked)+.toggle-slider {
+    background: #8696a0 !important;
+}
+
+body.light-theme .toggle-switch input:not(:checked)+.toggle-slider {
+    background: #d1d7db !important;
+}
+
+/* Logout button in profile */
+body.light-theme .settings-item-wa[onclick='logout()'] {
+    color: #d9001b !important;
+}
+
+body.light-theme .settings-item-wa[onclick='logout()'] i {
+    color: #d9001b !important;
+}
+
+/* Welcome Message Text - Strong Light Theme Override */
+.welcome-message-text {
+    color: #667781 !important;
+}
+
+body.light-theme .welcome-message-text {
+    color: #667781 !important;
+}
+
+/* Dark theme */
+body:not(.light-theme) .welcome-message-text {
+    color: #8696a0 !important;
+}
+
+/* Welcome Screen - Override inline styles for light theme */
+body.light-theme #welcome-screen p,
+body.light-theme #welcome-screen h1,
+body.light-theme #messages-container p {
+    color: #54656f !important;
+}
+
+body.light-theme #welcome-screen i.material-icons-outlined {
+    color: #8696a0 !important;
+}
+
+body.light-theme #welcome-screen div[style*='color: #667781'] {
+    color: #54656f !important;
+}

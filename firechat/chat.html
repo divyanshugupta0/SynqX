@@ -1,0 +1,1890 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0e27">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>SynqX</title>
+    <link rel="icon" type="image/png" href="chat.png">
+
+    <!-- Icons - Load FIRST for proper rendering -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Icons+Outlined" rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="unique-design.css">
+    <link rel="stylesheet" href="light-theme.css">
+    <link rel="stylesheet" href="emoji-picker.css">
+    <link rel="stylesheet" href="enhanced-features.css">
+    <link rel="stylesheet" href="audio-call.css">
+    <link rel="stylesheet" href="mobile-ui.css">
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+</head>
+
+<body>
+    <!-- MAIN APP LOADER -->
+    <div id="app-loader" class="loading-overlay" style="display: flex;">
+        <div class="loader-content">
+            <img src="chat.png" alt="Logo" style="width: 72px; height: 72px; margin-bottom: 16px; border-radius: 14px;">
+            <h1 style="color: #e9edef; font-size: 22px; font-weight: 600; margin: 0 0 32px 0; letter-spacing: 0.5px;">
+                SynqX</h1>
+            <div class="loader-progress"></div>
+            <div class="loader-footer">
+                <i class="material-icons" style="font-size: 14px;">lock</i>
+                <span>End-to-end encrypted</span>
+            </div>
+        </div>
+    </div>
+    <!-- MOBILE IMAGE EDITOR (Separate Panel - Direct child of body) -->
+    <div id="mobile-image-editor" class="mobile-image-editor" style="display: none;">
+        <div class="mobile-editor-header">
+            <button class="mobile-editor-btn" id="mobile-editor-close">
+                <i class="material-icons">close</i>
+            </button>
+            <div class="mobile-editor-tools">
+                <button class="mobile-editor-btn" data-tool="crop">
+                    <i class="material-icons">crop</i>
+                </button>
+                <button class="mobile-editor-btn" data-tool="draw">
+                    <i class="material-icons">edit</i>
+                </button>
+                <button class="mobile-editor-btn" data-tool="text">
+                    <i class="material-icons">title</i>
+                </button>
+                <button class="mobile-editor-btn" data-tool="emoji">
+                    <i class="material-icons">emoji_emotions</i>
+                </button>
+            </div>
+            <button class="mobile-editor-done" id="mobile-editor-done">Done</button>
+        </div>
+        <div class="mobile-editor-preview">
+            <img id="mobile-editor-image" src="" alt="Preview">
+        </div>
+        <div class="mobile-editor-footer">
+            <div class="mobile-editor-caption-wrap">
+                <input type="text" id="mobile-editor-caption" placeholder="Add a caption...">
+            </div>
+            <button class="mobile-editor-send" id="mobile-editor-send">
+                <i class="material-icons">send</i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Cyber Grid Background -->
+    <div class="cyber-grid"></div>
+
+    <!-- Main Chat App -->
+    <div class="chat-app">
+        <!-- Sidebar -->
+        <aside class="chat-sidebar">
+            <div class="sidebar-icon active" id="nav-chat" onclick="openChatsView()">
+                <i class="material-icons">chat</i>
+            </div>
+            <div class="sidebar-icon" id="nav-users" onclick="openUsersModal()">
+                <i class="material-icons">people</i>
+            </div>
+            <div class="sidebar-icon" id="nav-calls" onclick="openCallsModal()">
+                <i class="material-icons">phone_enabled</i>
+            </div>
+            <div class="sidebar-icon" id="nav-settings" onclick="openSettingsModal()">
+                <i class="material-icons">settings</i>
+            </div>
+            <div style="margin-top: auto;"></div>
+            <div class="sidebar-icon" id="profile-icon" onclick="openProfileModal()">
+                <img src="anony.jpg" alt="Profile">
+            </div>
+
+
+        </aside>
+
+        <!-- Header -->
+        <header class="chat-header" id="chat-main-header" style="display: none;">
+            <div class="header-title">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <img id="chat-header-avatar" src="anony.jpg"
+                        style="width: 40px; height: 40px; border-radius: 50%; display: none; object-fit: cover;">
+                    <div>
+                        <h1 id="chat-header-name" style="margin: 0; font-size: 16px; line-height: 1.2;">SynqX
+                        </h1>
+                        <div class="header-status" id="connection-status" style="margin-top: 2px;">
+                            <span class="status-dot"></span>
+                            <span>Select a contact to chat</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="header-btn" onclick="startVideoCall()" title="Video call">
+                    <i class="material-icons">videocam</i>
+                </button>
+                <button class="header-btn" onclick="startAudioCall()" title="Voice call">
+                    <i class="material-icons">call</i>
+                </button>
+                <button class="header-btn" onclick="toggleInfoPanel()" title="Contact info">
+                    <i class="material-icons">info</i>
+                </button>
+                <button class="header-btn" onclick="toggleChatMenu()" title="Menu">
+                    <i class="material-icons">more_vert</i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Chat Header Menu -->
+        <div id="chat-header-menu" class="dropdown-menu"
+            style="display: none; position: absolute; top: 60px; right: 20px; z-index: 1000;">
+            <div class="menu-item" onclick="toggleSearchInChat(); toggleChatMenu();"><i
+                    class="material-icons">search</i> Search</div>
+            <div class="menu-item" onclick="toggleChatMenu();"><i class="material-icons">volume_off</i> Mute
+                notifications</div>
+            <div class="menu-item" onclick="toggleChatMenu();"><i class="material-icons">wallpaper</i> Wallpaper</div>
+        </div>
+
+        <!-- Contacts Panel -->
+        <aside class="chat-contacts">
+            <!-- Header -->
+            <div class="contacts-header"
+                style="padding: 20px 16px 16px; display: flex; align-items: center; justify-content: space-between; position: relative;">
+                <h1 style="font-size: 22px; font-weight: 700; margin: 0; color: #e9edef;">SynqX Chats</h1>
+                <div style="display: flex; gap: 16px;">
+                    <button class="icon-btn" onclick="openUsersModal()" title="New Chat"><i
+                            class="material-icons">add_comment</i></button>
+                    <button class="icon-btn" onclick="toggleMainMenu()" title="Menu"><i
+                            class="material-icons">more_vert</i></button>
+                </div>
+                <!-- Dropdown -->
+                <div id="main-menu-dropdown" class="dropdown-menu" style="display: none; top: 50px; right: 20px;">
+                    <div class="menu-item" onclick="openUsersModal(); toggleMainMenu();"><i
+                            class="material-icons">group_add</i> New group
+                    </div>
+                    <div class="menu-item" onclick="toggleMainMenu();"><i class="material-icons">star_border</i> Starred
+                        messages</div>
+                    <div class="menu-item" onclick="toggleMainMenu();"><i
+                            class="material-icons">check_box_outline_blank</i> Select chats</div>
+                    <div class="menu-item" onclick="openSettingsModal(); toggleMainMenu();"><i
+                            class="material-icons">settings</i> Settings
+                    </div>
+                    <div class="menu-item" onclick="confirmLogout(); toggleMainMenu();"><i
+                            class="material-icons">logout</i> Log out</div>
+                </div>
+            </div>
+
+            <!-- Search -->
+            <div style="padding: 0 16px 12px;">
+                <div class="search-bar-container">
+                    <i class="material-icons" style="opacity: 0.6; font-size: 20px;">search</i>
+                    <input type="text" placeholder="Search or start new chat" id="contacts-search">
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filter-chips">
+                <span class="chip active" onclick="filterContacts('all')">All</span>
+                <span class="chip" onclick="filterContacts('unread')">Unread</span>
+                <span class="chip" onclick="filterContacts('favourites')">Favourites</span>
+                <span class="chip" onclick="filterContacts('groups')">Groups</span>
+            </div>
+            <div id="contacts-list"></div>
+        </aside>
+
+        <!-- SETTINGS PANEL -->
+        <div id="settings-modal" class="sidebar-panel">
+            <div class="sidebar-panel-header">
+                <i class="material-icons" onclick="closeSettingsModal()"
+                    style="cursor: pointer; color: #8696a0;">arrow_back</i>
+                <div>Settings</div>
+            </div>
+
+            <div class="sidebar-panel-content">
+                <div style="padding: 10px 15px;">
+                    <div class="search-bar-container" style="background: #202c33; padding: 6px 12px;">
+                        <i class="material-icons" style="font-size: 18px; opacity: 0.5;">search</i>
+                        <input type="text" placeholder="Search settings">
+                    </div>
+                </div>
+
+                <div class="settings-user-card" onclick="openProfileModal(true)"
+                    style="display: flex; align-items: center; gap: 15px; padding: 15px 20px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05); transition: 0.2s;">
+                    <img id="settings-user-avatar" src="anony.jpg"
+                        style="width: 82px; height: 82px; border-radius: 50%; object-fit: cover;">
+                    <div>
+                        <div id="settings-user-name" style="font-size: 19px; font-weight: 400; margin-bottom: 4px;">
+                            User</div>
+                        <div id="settings-user-about" style="font-size: 14px; opacity: 0.7;">Hey there! I am using
+                            SynqX.</div>
+                    </div>
+                </div>
+
+                <div class="settings-list" style="padding-top: 10px;">
+                    <!-- Appearance -->
+                    <div class="settings-section-title"
+                        style="padding: 10px 24px 5px; color: #008069; font-size: 14px; font-weight: 500;">
+                        Appearance</div>
+                    <div class="settings-item-wa" onclick="document.getElementById('dark-mode-toggle').click()">
+                        <i class="material-icons">dark_mode</i>
+                        <div style="flex: 1;">
+                            <div class="t">Dark Mode</div>
+                            <div class="s">Use dark theme</div>
+                        </div>
+                        <label class="toggle-switch" onclick="event.stopPropagation()">
+                            <input type="checkbox" id="dark-mode-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <!-- Notifications -->
+                    <div class="settings-section-title"
+                        style="padding: 20px 24px 5px; color: #008069; font-size: 14px; font-weight: 500;">
+                        Notifications</div>
+                    <div class="settings-item-wa" onclick="document.getElementById('sound-toggle').click()">
+                        <i class="material-icons">notifications</i>
+                        <div style="flex: 1;">
+                            <div class="t">Sound Alerts</div>
+                            <div class="s">Play sound for incoming messages</div>
+                        </div>
+                        <label class="toggle-switch" onclick="event.stopPropagation()">
+                            <input type="checkbox" id="sound-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="settings-item-wa" onclick="document.getElementById('desktop-notif-toggle').click()">
+                        <i class="material-icons">laptop</i>
+                        <div style="flex: 1;">
+                            <div class="t">Desktop Notifications</div>
+                            <div class="s">Show system notifications</div>
+                        </div>
+                        <label class="toggle-switch" onclick="event.stopPropagation()">
+                            <input type="checkbox" id="desktop-notif-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <!-- Privacy -->
+                    <div class="settings-section-title"
+                        style="padding: 20px 24px 5px; color: #008069; font-size: 14px; font-weight: 500;">Privacy
+                    </div>
+                    <div class="settings-item-wa" onclick="openBlockedModal()">
+                        <i class="material-icons">block</i>
+                        <div style="flex: 1;">
+                            <div class="t">Blocked Contacts</div>
+                            <div class="s">Manage blocked users</div>
+                        </div>
+                        <i class="material-icons" style="font-size: 20px; color: #8696a0;">chevron_right</i>
+                    </div>
+
+                    <!-- Backup -->
+                    <div class="settings-section-title"
+                        style="padding: 20px 24px 5px; color: #008069; font-size: 14px; font-weight: 500;">Backup
+                    </div>
+                    <div class="settings-item-wa" onclick="document.getElementById('chat-backup-toggle').click()">
+                        <i class="material-icons">cloud</i>
+                        <div style="flex: 1;">
+                            <div class="t">Save Chat History</div>
+                            <div class="s">Messages stored in Firebase</div>
+                        </div>
+                        <label class="toggle-switch" onclick="event.stopPropagation()">
+                            <input type="checkbox" id="chat-backup-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- USERS PANEL -->
+        <div id="users-modal" class="sidebar-panel">
+            <div class="sidebar-panel-header">
+                <i class="material-icons" onclick="closeUsersModal()"
+                    style="cursor: pointer; color: #8696a0;">arrow_back</i>
+                <div>New Chat</div>
+            </div>
+
+            <div class="sidebar-panel-content">
+                <div style="padding: 10px 15px;">
+                    <input type="text" id="users-search" class="contacts-search" placeholder="Search for people..."
+                        style="width: 100%; margin: 0;">
+                </div>
+
+                <div id="users-list" style="padding: 0 10px;">
+                    <!-- Users loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- CALLS PANEL (Sidebar Panel) -->
+        <div id="calls-modal" class="sidebar-panel">
+            <div class="sidebar-panel-header">
+                <i class="material-icons" onclick="closeCallsModal()"
+                    style="cursor: pointer; color: #8696a0;">arrow_back</i>
+                <div>Calls</div>
+            </div>
+
+            <div class="sidebar-panel-content">
+                <div id="calls-list" class="calls-list" style="padding: 0;">
+                    <!-- Content loaded by JS -->
+                    <div class="empty-state" style="text-align: center; padding: 40px 20px; color: #8696a0;">
+                        <div
+                            style="background: rgba(255,255,255,0.05); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                            <i class="material-icons" style="font-size: 32px; opacity: 0.8;">phone_missed</i>
+                        </div>
+                        <p style="margin: 0; font-size: 15px;">No recent calls</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FORWARD MESSAGE MODAL -->
+        <div id="forward-message-modal" class="modal">
+            <div class="modal-content"
+                style="max-width: 400px; padding: 0; overflow: hidden; display: flex; flex-direction: column; max-height: 80vh;">
+                <div class="modal-header"
+                    style="background: var(--bg-header); padding: 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <h3 style="margin: 0; font-size: 16px; font-weight: 500; color: var(--text-primary);">Forward
+                        message to</h3>
+                    <span class="close-modal" onclick="closeForwardModal()"
+                        style="font-size: 24px; cursor: pointer; color: var(--text-secondary);">&times;</span>
+                </div>
+                <div class="modal-search-bar" style="padding: 10px; background: var(--bg-sidebar);">
+                    <input type="text" id="forward-search-input" placeholder="Search..."
+                        style="width: 100%; padding: 10px; border-radius: 8px; border: none; background: #202c33; color: var(--text-primary);">
+                </div>
+                <div id="forward-users-list" class="users-list" style="overflow-y: auto; flex: 1; padding: 0;">
+                    <!-- Recent chats will be populated here -->
+                </div>
+            </div>
+        </div>
+        <!-- DELETE MESSAGE MODAL -->
+        <div id="delete-message-modal" class="modal">
+            <div class="modal-content" style="max-width: 350px; padding: 20px; text-align: left;">
+                <h3 style="color: var(--text-primary); font-size: 18px; margin-bottom: 8px;">Delete message?</h3>
+                <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 24px;">You can delete messages
+                    for everyone or just for yourself.</p>
+
+                <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-end;">
+                    <button id="btn-delete-everyone" onclick="confirmDelete(true)"
+                        class="modal-btn delete-action-btn">Delete for
+                        everyone</button>
+                    <button id="btn-delete-me" onclick="confirmDelete(false)" class="modal-btn delete-action-btn">Delete
+                        for me</button>
+                    <button onclick="closeDeleteModal()" class="modal-btn cancel-btn">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- PROFILE PANEL -->
+        <div id="profile-modal" class="sidebar-panel">
+            <div class="sidebar-panel-header">
+                <i class="material-icons" onclick="closeProfileModal()"
+                    style="cursor: pointer; color: #8696a0;">arrow_back</i>
+                <div>Profile</div>
+            </div>
+
+            <div class="sidebar-panel-content">
+                <div id="profile-avatar-container"
+                    style="display: flex; flex-direction: column; align-items: center; padding: 28px 0; background-color: #111b21; margin-bottom: 10px;">
+                    <div style="position: relative; width: 200px; height: 200px;">
+                        <img id="profile-large-avatar" src="anony.jpg"
+                            style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                        <div class="avatar-overlay" onclick="document.getElementById('profile-file-input').click()">
+                            <i class="material-icons" style="font-size: 24px; margin-bottom: 8px;">camera_alt</i>
+                            <div style="font-size: 12px; font-weight: 500; text-align: center; line-height: 1.2;">
+                                CHANGE<br>PROFILE PHOTO</div>
+                        </div>
+                        <input type="file" id="profile-file-input" style="display: none;" accept="image/*"
+                            onchange="window.fireflyChat.updateProfileIcon(this)">
+                    </div>
+                </div>
+
+                <div class="profile-section">
+                    <div class="label">Your Name</div>
+                    <div class="value-row">
+                        <input type="text" id="profile-name-edit" value="User" readonly onblur="saveProfile()">
+                        <i class="material-icons edit-icon" onclick="enableEdit('profile-name-edit')">edit</i>
+                    </div>
+                    <div class="info-text">This is not your username or pin. This name will be visible to your SynqX
+                        contacts.</div>
+                </div>
+
+                <div class="profile-section">
+                    <div class="label">About</div>
+                    <div class="value-row">
+                        <input type="text" id="profile-about-edit" value="Hey there! I am using SynqX." readonly
+                            onblur="saveProfile()">
+                        <i class="material-icons edit-icon" onclick="enableEdit('profile-about-edit')">edit</i>
+                    </div>
+                </div>
+
+                <div class="profile-section">
+                    <div class="label">Username</div>
+                    <div class="value-row">
+                        <div style="font-size: 16px; color: #e9edef;" id="profile-username-display">@user</div>
+                        <i class="material-icons edit-icon" style="opacity: 0;">content_copy</i>
+                    </div>
+                </div>
+
+                <div class="profile-section">
+                    <div class="label">Email</div>
+                    <div class="value-row">
+                        <div style="font-size: 16px; color: #e9edef;" id="profile-email-display">user@example.com</div>
+                        <i class="material-icons edit-icon" style="opacity: 0;">content_copy</i>
+                    </div>
+                </div>
+
+                <!-- Logout Section -->
+                <div style="padding: 20px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05);">
+                    <div class="settings-item-wa" onclick="confirmLogout()"
+                        style="color: #e74c3c; cursor: pointer; transition: 0.2s;">
+                        <i class="material-icons" style="color: #e74c3c;">logout</i>
+                        <div>
+                            <div class="t">Logout</div>
+                            <div class="s" style="color: rgba(231, 76, 60, 0.7);">Sign out from this device</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BLOCKED USERS PANEL -->
+        <div id="blocked-users-modal" class="sidebar-panel">
+            <div class="sidebar-panel-header">
+                <i class="material-icons" onclick="closeBlockedModal()"
+                    style="cursor: pointer; color: #8696a0;">arrow_back</i>
+                <div>Blocked Users</div>
+            </div>
+
+            <div class="sidebar-panel-content" style="padding: 24px;">
+                <div id="blocked-users-list">
+                    <!-- Content -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages Area -->
+        <main class="chat-messages" id="messages-container">
+            <div id="welcome-screen"
+                style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #e9edef; text-align: center; padding: 0 40px;">
+                <img src="chatbgremoved.png" alt="SynqX"
+                    style="width: 120px; height: 120px; margin-bottom: 32px; opacity: 0.8;">
+                <h1 style="font-weight: 300; font-size: 32px; margin-bottom: 20px;">SynqX</h1>
+                <p style="color: #8696a0; font-size: 14px; line-height: 20px; max-width: 460px;">Send and receive
+                    messages without downlaod any application.
+                <div
+                    style="margin-top: auto; padding-bottom: 40px; color: #667781; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                    <i class="material-icons" style="font-size: 12px;">lock</i>
+                    <span>Your personal messages are end-to-end encrypted</span>
+                </div>
+            </div>
+        </main>
+
+        <!-- Input Area -->
+        <div class="chat-input" id="chat-input-area" style="display: none; position: relative;">
+            <!-- Input Link Preview -->
+            <div id="url-preview-panel" class="url-preview-panel" style="display: none;">
+                <div class="url-preview-content">
+                    <div class="url-preview-title" id="url-preview-title">Page Title</div>
+                    <div class="url-preview-domain" id="url-preview-domain">domain.com</div>
+                </div>
+                <div class="url-preview-thumb" id="url-preview-thumb">
+                    <i class="material-icons">link</i>
+                </div>
+                <div class="url-preview-close" onclick="closeUrlPreview()">
+                    <i class="material-icons">close</i>
+                </div>
+            </div>
+
+            <!-- Reply Preview Panel -->
+            <div id="reply-preview-panel" class="reply-preview-panel" style="display: none;">
+                <div class="reply-preview-content">
+                    <div class="reply-to-name" id="reply-to-name">User Name</div>
+                    <div class="reply-to-text" id="reply-to-text">Message text...</div>
+                </div>
+                <div class="reply-preview-thumb" id="reply-preview-thumb" style="display:none;">
+                    <img id="reply-preview-img" src="">
+                </div>
+                <div class="reply-preview-close" onclick="cancelReply()">
+                    <i class="material-icons">close</i>
+                </div>
+            </div>
+
+            <!-- Full-Screen Image Preview Panel (SynqX-style) -->
+            <div id="image-editor-panel" class="image-editor-panel" style="display: none;">
+                <!-- Header with close, undo, toolbar, done, and download -->
+                <div class="image-editor-header">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <button class="editor-close-btn" onclick="closeImageEditor()">
+                            <i class="material-icons">close</i>
+                        </button>
+                        <button class="editor-close-btn editor-undo-btn" onclick="editorUndo()" title="Undo"
+                            style="position: static;">
+                            <i class="material-icons">undo</i>
+                        </button>
+                    </div>
+                    <div class="editor-toolbar">
+                        <button class="toolbar-btn" data-tool="crop" onclick="toggleCropMode()" title="Crop"><i
+                                class="material-icons">crop</i></button>
+                        <button class="toolbar-btn" data-tool="draw" onclick="selectEditorTool('draw')" title="Draw"><i
+                                class="material-icons">edit</i></button>
+                        <button class="toolbar-btn" data-tool="text" onclick="selectEditorTool('text')" title="Text"><i
+                                class="material-icons">title</i></button>
+                        <button class="toolbar-btn" data-tool="shapes" onclick="toggleShapeDropdown()" title="Shapes"><i
+                                class="material-icons">crop_square</i></button>
+                        <button class="toolbar-btn" data-tool="sticker" onclick="selectEditorTool('sticker')"
+                            title="Stickers"><i class="material-icons">emoji_emotions</i></button>
+                        <button class="toolbar-btn" data-tool="pixelate" onclick="selectEditorTool('pixelate')"
+                            title="Pixelate"><i class="material-icons">blur_on</i></button>
+                        <button class="toolbar-btn" data-tool="filters" onclick="toggleFiltersPanel()"
+                            title="Filters"><i class="material-icons">auto_awesome</i></button>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <button class="editor-done-btn" onclick="applyEditorChanges()">Done</button>
+                        <button class="editor-download-btn" onclick="downloadPreviewImage()" title="Download">
+                            <i class="material-icons">download</i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filters Panel (Hidden by default) -->
+                <div id="editor-filters-panel" class="editor-filters-panel">
+                    <div class="filter-item active" data-filter="none" onclick="applyFilter('none')">
+                        <div class="filter-preview">
+                            <img id="filter-thumb-none" src="" alt="None">
+                            <div class="filter-check"><i class="material-icons">check</i></div>
+                        </div>
+                        <span class="filter-name">None</span>
+                    </div>
+                    <div class="filter-item" data-filter="pop" onclick="applyFilter('pop')">
+                        <div class="filter-preview" style="filter: saturate(1.5) contrast(1.1);">
+                            <img id="filter-thumb-pop" src="" alt="Pop">
+                            <div class="filter-check"><i class="material-icons">check</i></div>
+                        </div>
+                        <span class="filter-name">Pop</span>
+                    </div>
+                    <div class="filter-item" data-filter="bw" onclick="applyFilter('bw')">
+                        <div class="filter-preview" style="filter: grayscale(1);">
+                            <img id="filter-thumb-bw" src="" alt="B&W">
+                            <div class="filter-check"><i class="material-icons">check</i></div>
+                        </div>
+                        <span class="filter-name">B&W</span>
+                    </div>
+                    <div class="filter-item" data-filter="cool" onclick="applyFilter('cool')">
+                        <div class="filter-preview" style="filter: sepia(0.2) hue-rotate(180deg);">
+                            <img id="filter-thumb-cool" src="" alt="Cool">
+                            <div class="filter-check"><i class="material-icons">check</i></div>
+                        </div>
+                        <span class="filter-name">Cool</span>
+                    </div>
+                    <div class="filter-item" data-filter="chrome" onclick="applyFilter('chrome')">
+                        <div class="filter-preview" style="filter: contrast(1.2) brightness(1.1);">
+                            <img id="filter-thumb-chrome" src="" alt="Chrome">
+                            <div class="filter-check"><i class="material-icons">check</i></div>
+                        </div>
+                        <span class="filter-name">Chrome</span>
+                    </div>
+                    <div class="filter-item" data-filter="film" onclick="applyFilter('film')">
+                        <div class="filter-preview" style="filter: sepia(0.3) contrast(1.1);">
+                            <img id="filter-thumb-film" src="" alt="Film">
+                            <div class="filter-check"><i class="material-icons">check</i></div>
+                        </div>
+                        <span class="filter-name">Film</span>
+                    </div>
+                </div>
+
+                <!-- Shape Dropdown (Hidden by default) -->
+                <div id="editor-shape-dropdown" class="shape-dropdown">
+                    <button class="shape-btn" data-shape="rectangle" onclick="selectShape('rectangle')"><i
+                            class="material-icons">crop_square</i></button>
+                    <button class="shape-btn" data-shape="circle" onclick="selectShape('circle')"><i
+                            class="material-icons">radio_button_unchecked</i></button>
+                    <button class="shape-btn" data-shape="line" onclick="selectShape('line')"><i
+                            class="material-icons">remove</i></button>
+                    <button class="shape-btn" data-shape="arrow" onclick="selectShape('arrow')"><i
+                            class="material-icons">trending_flat</i></button>
+                </div>
+
+                <!-- Main image preview area -->
+                <div class="image-editor-preview" id="editor-preview-wrapper">
+                    <div class="crop-container" id="crop-container" style="display: none;">
+                        <div class="crop-overlay"></div>
+                        <div class="crop-box" id="crop-box">
+                            <div class="crop-handle top-left"></div>
+                            <div class="crop-handle top-center"></div>
+                            <div class="crop-handle top-right"></div>
+                            <div class="crop-handle middle-left"></div>
+                            <div class="crop-handle middle-right"></div>
+                            <div class="crop-handle bottom-left"></div>
+                            <div class="crop-handle bottom-center"></div>
+                            <div class="crop-handle bottom-right"></div>
+                        </div>
+                    </div>
+                    <img id="editor-preview-image" src="" alt="Preview" draggable="false" ondragstart="return false;">
+                </div>
+
+                <!-- Crop Controls (shown when crop mode active) -->
+                <div id="crop-controls" class="crop-controls" style="display: none;">
+                    <button class="crop-control-btn" onclick="rotateCropLeft()" title="Rotate Left"><i
+                            class="material-icons">rotate_left</i></button>
+                    <button class="crop-control-btn" onclick="rotateCropRight()" title="Rotate Right"><i
+                            class="material-icons">rotate_right</i></button>
+                    <button class="crop-control-btn reset-btn" onclick="resetCrop()">Reset</button>
+                </div>
+
+                <!-- Color Palette (for draw/text/shapes) -->
+                <div id="editor-color-palette" class="editor-color-palette">
+                    <div class="color-dot" style="background: #8696a0;" data-color="#8696a0"
+                        onclick="selectEditorColor('#8696a0')"></div>
+                    <div class="color-dot" style="background: #54656f;" data-color="#54656f"
+                        onclick="selectEditorColor('#54656f')"></div>
+                    <div class="color-dot active" style="background: #1a1a2e;" data-color="#1a1a2e"
+                        onclick="selectEditorColor('#1a1a2e')"></div>
+                    <div class="color-dot" style="background: #3b82f6;" data-color="#3b82f6"
+                        onclick="selectEditorColor('#3b82f6')"></div>
+                    <div class="color-dot" style="background: #00a884;" data-color="#00a884"
+                        onclick="selectEditorColor('#00a884')"></div>
+                    <div class="color-dot" style="background: #a855f7;" data-color="#a855f7"
+                        onclick="selectEditorColor('#a855f7')"></div>
+                    <div class="color-dot" style="background: #f97316;" data-color="#f97316"
+                        onclick="selectEditorColor('#f97316')"></div>
+                    <div class="color-dot" style="background: #ef4444;" data-color="#ef4444"
+                        onclick="selectEditorColor('#ef4444')"></div>
+                    <div class="color-palette-divider"></div>
+                    <div class="font-selector" onclick="toggleFontSelector()">
+                        <i class="material-icons">expand_less</i>
+                        <span>Sans Serif</span>
+                    </div>
+                    <div class="color-palette-divider"></div>
+                    <div class="background-toggle" onclick="toggleTextBackground()">
+                        <div class="toggle-circle"></div>
+                        <span>Background</span>
+                    </div>
+                    <i class="material-icons" style="color: #8696a0; cursor: pointer;"
+                        onclick="deleteSelectedElement()">delete</i>
+                </div>
+
+                <!-- Bottom section with caption input and thumbnails -->
+                <div class="image-editor-footer">
+                    <!-- Caption input -->
+                    <div class="editor-caption-wrapper">
+                        <input type="text" id="editor-caption-input" placeholder="Type a message"
+                            class="editor-caption-input">
+                        <button class="caption-emoji-btn" onclick="triggerEmojiPicker(event)">
+                            <i class="material-icons">emoji_emotions</i>
+                        </button>
+                    </div>
+
+                    <!-- Thumbnail strip -->
+                    <div class="editor-thumbnail-strip">
+                        <div class="thumbnail-container" id="editor-thumbnails">
+                            <!-- Thumbnails will be added dynamically -->
+                        </div>
+                        <button class="add-image-btn" onclick="addMoreImages()">
+                            <i class="material-icons">add</i>
+                        </button>
+                    </div>
+
+                    <!-- Send button -->
+                    <button class="editor-send-btn" onclick="sendEditorImage()">
+                        <i class="material-icons">send</i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="input-wrapper">
+                <!-- Recording UI Overlay -->
+                <div id="recording-ui" class="recording-ui">
+                    <div class="recording-indicator"></div>
+                    <div class="recording-timer" id="recording-timer">0:00</div>
+                    <div style="flex: 1; color: var(--text-secondary); font-size: 13px;">Recording...</div>
+                    <button class="input-btn" onclick="cancelRecording()"
+                        style="color: #ef4444; margin-right: 8px;">Cancel</button>
+                    <button class="input-btn" onclick="stopAndSendRecording()" style="color: #00a884;">
+                        <i class="material-icons">send</i>
+                    </button>
+                </div>
+
+                <textarea class="message-input" id="message-input" placeholder="Type your message..."
+                    rows="1"></textarea>
+                <div class="input-actions">
+                    <button class="input-btn" onclick="triggerEmojiPicker(event)" title="Click to open emoji picker">
+                        <i class="material-icons">emoji_emotions</i>
+                    </button>
+                    <button class="input-btn" onclick="attachFile()">
+                        <i class="material-icons">attach_file</i>
+                    </button>
+                    <input type="file" id="file-input" accept="image/*,video/*" style="display: none;">
+                </div>
+            </div>
+            <button class="send-btn" id="send-btn" onclick="sendMessage()">
+                <i class="material-icons">send</i>
+            </button>
+            <button class="mic-btn" id="mic-btn" onclick="toggleAudioRecording()" style="display: none;">
+                <i class="material-icons">mic</i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Info Panel (hidden by default) -->
+    <aside class="chat-info" id="info-panel" style="display: none;">
+        <div class="info-header">
+            <i class="material-icons" onclick="toggleInfoPanel()" style="cursor: pointer; color: #8696a0;">close</i>
+            <h2>Contact info</h2>
+        </div>
+
+        <div class="info-content">
+            <div class="info-profile">
+                <div class="info-avatar">
+                    <img src="anony.jpg" alt="User" id="peer-avatar">
+                </div>
+                <div class="info-name-large" id="peer-name">User</div>
+                <div class="info-phone" id="peer-username-display">@username</div>
+            </div>
+
+            <div class="info-card">
+                <div class="info-section-title">About</div>
+                <div class="info-text-value" id="peer-about">Hey there! I am using SynqX.</div>
+            </div>
+
+            <div class="info-card">
+                <div class="media-preview-header" onclick="openMediaGallery()" style="cursor: pointer;">
+                    <span>Media, links and docs</span>
+                    <div style="display: flex; align-items: center; gap: 4px; font-size: 13px;">
+                        <span class="media-count" id="media-count">0</span>
+                        <i class="material-icons">chevron_right</i>
+                    </div>
+                </div>
+                <div class="media-grid" id="media-grid">
+                    <!-- Media items will be populated here -->
+                    <div style="grid-column: 1/-1; text-align: center; color: #8696a0; font-size: 13px; padding: 10px;">
+                        No media shared
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="action-item">
+                    <i class="material-icons-outlined">star</i>
+                    <div class="action-text">Starred messages</div>
+                    <i class="material-icons" style="font-size: 16px;">chevron_right</i>
+                </div>
+                <div class="action-item">
+                    <i class="material-icons-outlined">notifications</i>
+                    <div class="action-text">Notification settings</div>
+                    <i class="material-icons" style="font-size: 16px;">chevron_right</i>
+                </div>
+                <div class="action-item">
+                    <i class="material-icons-outlined">lock</i>
+                    <div class="action-text">
+                        <div>Encryption</div>
+                        <div class="action-sub">Messages are end-to-end encrypted.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-card" style="margin-bottom: 20px;">
+                <div class="action-item danger" onclick="clearChat()">
+                    <i class="material-icons-outlined">delete</i>
+                    <div class="action-text">Clear chat</div>
+                </div>
+                <div class="action-item danger" onclick="endChat()">
+                    <i class="material-icons-outlined">block</i>
+                    <div class="action-text">Block User</div>
+                </div>
+                <div class="action-item danger">
+                    <i class="material-icons-outlined">thumb_down</i>
+                    <div class="action-text">Report User</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Media Gallery View (Hidden by default) -->
+        <div id="media-gallery-view" class="media-gallery-view" style="display: none;">
+            <div class="gallery-header">
+                <div class="gallery-nav">
+                    <i class="material-icons" onclick="closeMediaGallery()">arrow_back</i>
+                    <span id="gallery-peer-name">Contact Info</span>
+                </div>
+                <div class="gallery-tabs">
+                    <div class="gallery-tab active" onclick="switchGalleryTab('media')">Media</div>
+                    <div class="gallery-tab" onclick="switchGalleryTab('docs')">Docs</div>
+                    <div class="gallery-tab" onclick="switchGalleryTab('links')">Links</div>
+                </div>
+            </div>
+            <div class="gallery-content">
+                <div id="gallery-media" class="gallery-section" style="display: block;">
+                    <!-- Media Grid -->
+                </div>
+                <div id="gallery-docs" class="gallery-section" style="display: none;">
+                    <!-- Docs List -->
+                </div>
+                <div id="gallery-links" class="gallery-section" style="display: none;">
+                    <!-- Links List -->
+                </div>
+            </div>
+        </div>
+
+
+
+        <!-- Notification Toast -->
+        <div id="notification" class="notification-toast"></div>
+
+        <!-- Loading Overlay -->
+        <!-- Loading Overlay -->
+        <div id="loading" class="loading-overlay" style="display: none;">
+            <div class="loader-content">
+                <img src="chat.png" alt="SynqX" style="width: 80px; height: 80px; margin-bottom: 24px;">
+                <h2 style="font-weight: 500; font-size: 22px; color: #e9edef; margin-bottom: 32px;">SynqX
+                </h2>
+                <div class="loader-progress"></div>
+            </div>
+            <div class="loader-footer">
+                <i class="material-icons" style="font-size: 12px; margin-right: 6px;">lock</i>
+                <span>End-to-end encrypted</span>
+            </div>
+        </div>
+
+        <!-- Scripts -->
+        <script src="firebase-config.js"></script>
+        <script src="auth-check.js"></script>
+        <script src="message-router.js"></script>
+        <script src="settings-manager.js"></script>
+        <script src="profile-manager.js"></script>
+        <script src="emoji-picker.js"></script>
+        <script src="modern-chat.js"></script>
+        <script src="audio-call.js"></script>
+        <script src="audio-chat.js"></script>
+        <script src="advanced-features.js"></script>
+        <script src="mobile-ui.js"></script>
+
+        <style>
+            /* Additional inline styles for modals and overlays */
+            .profile-modal {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.85);
+                backdrop-filter: blur(10px);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 3000;
+            }
+
+
+
+            .app-container {
+                position: relative;
+            }
+
+            .modal-content {
+                background: rgba(21, 26, 54, 0.98);
+                backdrop-filter: blur(20px);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 24px;
+                padding: 32px;
+                max-width: 500px;
+                width: 90%;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+
+            .modal-content h2 {
+                background: linear-gradient(135deg, #ff006e, #8b5cf6, #00d9ff);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                font-size: 24px;
+            }
+
+            .profile-img-container {
+                width: 120px;
+                height: 120px;
+                margin: 0 auto;
+                border-radius: 24px;
+                background: linear-gradient(135deg, #ff006e, #8b5cf6, #00d9ff);
+                padding: 3px;
+                overflow: hidden;
+            }
+
+            .profile-img-container img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                border-radius: 21px;
+            }
+
+            .modal-content label {
+                display: block;
+                margin-bottom: 8px;
+                font-size: 14px;
+                opacity: 0.8;
+            }
+
+            .modal-content input[type="text"],
+            .modal-content input[type="file"] {
+                width: 100%;
+                padding: 12px 16px;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+                color: white;
+                font-family: inherit;
+            }
+
+            .modal-buttons {
+                display: flex;
+                gap: 12px;
+            }
+
+            .btn-save,
+            .btn-cancel {
+                flex: 1;
+                padding: 14px;
+                border: none;
+                border-radius: 12px;
+                color: white;
+                font-weight: 600;
+                cursor: pointer;
+                transition: 0.3s;
+            }
+
+            .btn-save {
+                background: linear-gradient(135deg, #ff006e, #8b5cf6, #00d9ff);
+            }
+
+            .btn-save:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(255, 0, 110, 0.4);
+            }
+
+            .btn-cancel {
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .btn-cancel:hover {
+                background: rgba(255, 255, 255, 0.12);
+            }
+
+
+
+            .loading-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.85);
+                backdrop-filter: blur(10px);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 3000;
+            }
+
+            .loading-spinner {
+                width: 60px;
+                height: 60px;
+                border: 3px solid rgba(255, 255, 255, 0.1);
+                border-top: 3px solid #00d9ff;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin-bottom: 20px;
+            }
+
+            @keyframes spin {
+                from {
+                    transform: rotate(0deg);
+                }
+
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+
+            .connect-btn-small {
+                padding: 12px 16px;
+                background: linear-gradient(135deg, #ff006e, #8b5cf6, #00d9ff);
+                border: none;
+                border-radius: 12px;
+                color: white;
+                cursor: pointer;
+                transition: 0.3s;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .connect-btn-small:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(255, 0, 110, 0.4);
+            }
+
+            #profile-icon img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                border-radius: 12px;
+            }
+
+            /* Settings Items */
+            .settings-section {
+                margin-bottom: 20px;
+            }
+
+            .settings-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 0;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            }
+
+            /* Toggle Switch */
+            .toggle-switch {
+                position: relative;
+                width: 50px;
+                height: 26px;
+            }
+
+            .toggle-switch input {
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+
+            .toggle-slider {
+                position: absolute;
+                cursor: pointer;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: rgba(255, 255, 255, 0.1);
+                border-radius: 34px;
+                transition: 0.3s;
+            }
+
+            .toggle-slider:before {
+                position: absolute;
+                content: "";
+                height: 20px;
+                width: 20px;
+                left: 3px;
+                bottom: 3px;
+                background-color: white;
+                border-radius: 50%;
+                transition: 0.3s;
+            }
+
+            .toggle-switch input:checked+.toggle-slider {
+                background: #00a884;
+            }
+
+            .toggle-switch input:checked+.toggle-slider:before {
+                transform: translateX(24px);
+            }
+
+
+            /* User List Item */
+            .user-list-item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px;
+                background: rgba(255, 255, 255, 0.03);
+                border: 1px solid rgba(255, 255, 255, 0.05);
+                border-radius: 12px;
+                margin-bottom: 8px;
+                cursor: pointer;
+                transition: 0.2s;
+            }
+
+            .user-list-item:hover {
+                background: rgba(255, 255, 255, 0.08);
+                border-color: rgba(0, 217, 255, 0.3);
+            }
+
+            .user-list-avatar {
+                width: 48px;
+                height: 48px;
+                border-radius: 12px;
+                overflow: hidden;
+                background: linear-gradient(135deg, #ff006e, #8b5cf6);
+            }
+
+            .user-list-avatar img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+        </style>
+
+
+
+        <div id="block-list-modal" class="profile-modal" style="display: none;">
+            <div class="modal-content">
+                <h2 style="margin-bottom: 24px;">Blocked Users</h2>
+                <div id="blocked-users-list" style="max-height: 400px; overflow-y: auto;">
+                    < !-- Blocked users loaded here -->
+                        <p style="text-align: center; opacity: 0.6;">No blocked users</p>
+                </div>
+                <div class="modal-buttons" style="margin-top: 24px;"><button onclick="closeBlockListModal()"
+                        class="btn-cancel">Close</button></div>
+            </div>
+        </div>
+
+        <div id="confirm-block-modal" class="profile-modal" style="display: none; z-index: 3100;">
+            <div class="modal-content" style="max-width: 400px; text-align: center;"><i class="material-icons"
+                    style="font-size: 48px; color: #ff006e; margin-bottom: 16px;">block</i>
+                <h2 style="margin-bottom: 12px; color: #ff006e !important;">Block User?</h2>
+                <p style="opacity: 0.8; margin-bottom: 24px;">This will delete all chat history,
+                    remove them from your contacts,
+                    and prevent them from messaging you. They will NOT be notified. </p>
+                <div class="modal-buttons"><button onclick="confirmBlockUser()" class="btn-save"
+                        style="background: #ff006e;">Block</button><button onclick="closeConfirmBlockModal()"
+                        class="btn-cancel">Cancel</button></div>
+            </div>
+        </div>
+        <style>
+            /* Contact Item Styles */
+            .contact-item {
+                position: relative;
+            }
+
+            /* Menu Button */
+            .contact-menu-btn {
+                opacity: 0;
+                padding: 8px;
+                cursor: pointer;
+                border-radius: 50%;
+                transition: 0.2s;
+                color: rgba(255, 255, 255, 0.6);
+                position: absolute;
+                right: 8px;
+                top: 50%;
+                transform: translateY(-50%);
+                z-index: 5;
+            }
+
+            .contact-item:hover .contact-menu-btn {
+                opacity: 1;
+            }
+
+            .contact-menu-btn:hover {
+                background: rgba(255, 255, 255, 0.1);
+                color: white;
+            }
+
+            /* Context Menu */
+            .context-menu {
+                position: absolute;
+                right: 10px;
+                top: 40px;
+                background: #1a1f3c;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+                padding: 6px;
+                min-width: 160px;
+                z-index: 100;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+                display: none;
+                backdrop-filter: blur(10px);
+            }
+
+            .context-menu.active {
+                display: block;
+            }
+
+            .context-menu-item {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 10px 12px;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: 0.2s;
+                font-size: 13px;
+                color: rgba(255, 255, 255, 0.8);
+            }
+
+            .unread-badge {
+                background: #ff006e;
+                color: white;
+                border-radius: 12px;
+                /* Pill shape */
+                padding: 2px 8px;
+                font-size: 11px;
+                font-weight: 700;
+                margin-left: 8px;
+                box-shadow: 0 2px 5px rgba(255, 0, 110, 0.3);
+                animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            }
+
+            @keyframes popIn {
+                from {
+                    transform: scale(0);
+                }
+
+                to {
+                    transform: scale(1);
+                }
+            }
+
+            .context-menu-item:hover {
+                background: rgba(255, 255, 255, 0.08);
+                color: white;
+            }
+
+            .context-menu-item.danger {
+                color: #ff006e;
+            }
+
+            .context-menu-item.danger:hover {
+                background: rgba(255, 0, 110, 0.1);
+            }
+
+            /* Blocked User Item */
+            .blocked-user-item {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 12px;
+                background: rgba(255, 0, 110, 0.05);
+                border: 1px solid rgba(255, 0, 110, 0.1);
+                border-radius: 12px;
+                margin-bottom: 8px;
+            }
+
+            .unblock-btn {
+                padding: 6px 12px;
+                background: rgba(255, 255, 255, 0.1);
+                border: none;
+                border-radius: 6px;
+                color: white;
+                cursor: pointer;
+                font-size: 12px;
+                transition: 0.2s;
+            }
+
+            .unblock-btn:hover {
+                background: linear-gradient(135deg, #10b981, #059669);
+            }
+        </style>
+
+        <!-- Global Context Menu -->
+        <div id="contact-context-menu" class="context-menu">
+            <div class="context-menu-item" onclick="handleContextMenuAction('profile')">
+                <i class="material-icons" style="font-size: 16px;">person</i>
+                <span>View Profile</span>
+            </div>
+            <div class="context-menu-item" onclick="handleContextMenuAction('disconnect')">
+                <i class="material-icons" style="font-size: 16px;">link_off</i>
+                <span>Disconnect</span>
+            </div>
+            <div class="context-menu-item" onclick="handleContextMenuAction('delete')">
+                <i class="material-icons" style="font-size: 16px;">delete</i>
+                <span>Delete Chat</span>
+            </div>
+            <div class="context-menu-item danger" onclick="handleContextMenuAction('block')">
+                <i class="material-icons" style="font-size: 16px;">block</i>
+                <span>Block User</span>
+            </div>
+        </div>
+
+        <script> // Global Modal Functions
+
+            // Context Menu Wrapper
+            function handleContextMenuAction(action) {
+                if (window.fireflyChat) window.fireflyChat.handleContextMenuAction(action);
+            }
+
+            // Logout Confirmation Functions (window scope for global access)
+            window.confirmLogout = function () {
+                console.log('confirmLogout called');
+                const modal = document.getElementById('logout-confirm-modal');
+                if (!modal) {
+                    // Create modal if it doesn't exist
+                    const modalHTML = `
+                            <div id="logout-confirm-modal" class="modal-overlay" style="display: flex; z-index: 10000;">
+                                <div class="modal-content" style="max-width: 420px; text-align: center; padding: 32px;">
+                                    <i class="material-icons" style="font-size: 56px; color: #54656f; margin-bottom: 20px;">logout</i>
+                                    <h2 style="font-size: 20px; margin-bottom: 12px;">Log out?</h2>
+                                    <p style="color: #667781; font-size: 14px; line-height: 20px; margin-bottom: 24px;">
+                                        Are you sure you want to log out?
+                                    </p>
+                                    <div style="display: flex; gap: 12px; justify-content: center;">
+                                        <button onclick="closeLogoutConfirm()" class="btn-cancel" style="flex: 1; max-width: 140px;">Cancel</button>
+                                        <button onclick="performLogout()" class="btn-save" style="flex: 1; max-width: 140px; background: #d9001b !important;">Log out</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    document.body.insertAdjacentHTML('beforeend', modalHTML);
+                } else {
+                    modal.style.display = 'flex';
+                }
+            };
+
+            window.closeLogoutConfirm = function () {
+                const modal = document.getElementById('logout-confirm-modal');
+                if (modal) modal.style.display = 'none';
+            };
+
+            window.performLogout = function () {
+                closeLogoutConfirm();
+                if (typeof logout === 'function') {
+                    logout();
+                } else if (window.fireflyChat && typeof window.fireflyChat.logout === 'function') {
+                    window.fireflyChat.logout();
+                } else {
+                    console.error('Logout function not found');
+                }
+            };
+
+            // Logout Confirmation Functions
+            function confirmLogout() {
+                const modal = document.getElementById('logout-confirm-modal');
+                if (!modal) {
+                    // Create modal if it doesn't exist
+                    const modalHTML = `
+                            <div id="logout-confirm-modal" class="modal-overlay" style="display: flex;">
+                                <div class="modal-content" style="max-width: 420px; text-align: center; padding: 32px;">
+                                    <i class="material-icons" style="font-size: 56px; color: #54656f; margin-bottom: 20px;">logout</i>
+                                    <h2 style="font-size: 20px; margin-bottom: 12px;">Log out?</h2>
+                                    <p style="color: #667781; font-size: 14px; line-height: 20px; margin-bottom: 24px;">
+                                        Are you sure you want to log out?
+                                    </p>
+                                    <div style="display: flex; gap: 12px; justify-content: center;">
+                                        <button onclick="closeLogoutConfirm()" class="btn-cancel" style="flex: 1; max-width: 140px;">Cancel</button>
+                                        <button onclick="performLogout()" class="btn-save" style="flex: 1; max-width: 140px; background: #d9001b !important;">Log out</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    document.body.insertAdjacentHTML('beforeend', modalHTML);
+                } else {
+                    modal.style.display = 'flex';
+                }
+            }
+
+            function closeLogoutConfirm() {
+                const modal = document.getElementById('logout-confirm-modal');
+                if (modal) modal.style.display = 'none';
+            }
+
+            function performLogout() {
+                closeLogoutConfirm();
+                if (typeof logout === 'function') {
+                    logout();
+                } else if (window.fireflyChat && typeof window.fireflyChat.logout === 'function') {
+                    window.fireflyChat.logout();
+                }
+            }
+
+            // Filter contacts by category
+            function filterContacts(filter) {
+                // Update active chip
+                document.querySelectorAll('.chip').forEach(chip => {
+                    chip.classList.remove('active');
+                });
+                event.target.classList.add('active');
+
+                console.log('Filtering by:', filter);
+
+                // Get all contact items and filter them
+                const contacts = document.querySelectorAll('.contact-item');
+                contacts.forEach(contact => {
+                    if (filter === 'all') {
+                        contact.style.display = 'flex';
+                    } else if (filter === 'unread') {
+                        const hasUnread = contact.querySelector('.unread-badge');
+                        contact.style.display = hasUnread ? 'flex' : 'none';
+                    } else if (filter === 'favourites') {
+                        contact.style.display = contact.dataset.favorite === 'true' ? 'flex' : 'none';
+                    } else if (filter === 'groups') {
+                        contact.style.display = contact.dataset.isGroup === 'true' ? 'flex' : 'none';
+                    }
+                });
+            }
+
+            // Track currently editing field
+            let currentlyEditingField = null;
+
+            // Enable editing for profile fields
+            function enableEdit(inputId) {
+                // If another field is being edited, close it first
+                if (currentlyEditingField && currentlyEditingField !== inputId) {
+                    const previousInput = document.getElementById(currentlyEditingField);
+                    if (previousInput) {
+                        previousInput.setAttribute('readonly', 'true');
+                        const prevValueRow = previousInput.parentElement;
+                        const prevIcon = prevValueRow.querySelector('.edit-icon');
+                        if (prevIcon) {
+                            prevIcon.textContent = 'edit';
+                            prevIcon.onclick = () => enableEdit(currentlyEditingField);
+                        }
+                        // Remove emoji button from previous field
+                        const prevEmojiBtn = prevValueRow.querySelector('.profile-emoji-btn');
+                        if (prevEmojiBtn) prevEmojiBtn.remove();
+                    }
+                }
+
+                const input = document.getElementById(inputId);
+                if (input) {
+                    input.removeAttribute('readonly');
+                    input.focus(); // Auto-focus to input
+
+                    // Mark this field as currently editing
+                    currentlyEditingField = inputId;
+
+                    // Get the value-row container
+                    const valueRow = input.parentElement;
+
+                    // Change icon to checkmark while editing
+                    const icon = valueRow.querySelector('.edit-icon');
+                    if (icon) {
+                        icon.textContent = 'check';
+
+                        // Add emoji button
+                        const emojiBtn = document.createElement('i');
+                        emojiBtn.className = 'material-icons edit-icon profile-emoji-btn';
+                        emojiBtn.textContent = 'emoji_emotions';
+                        emojiBtn.style.marginRight = '8px';
+                        emojiBtn.style.cursor = 'pointer';
+                        emojiBtn.title = 'Add emoji';
+
+                        // Attach click handler
+                        emojiBtn.addEventListener('click', function (e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                            openProfileEmojiPicker(inputId, this);
+                        });
+
+                        valueRow.insertBefore(emojiBtn, icon);
+
+                        icon.onclick = () => {
+                            input.setAttribute('readonly', 'true');
+                            icon.textContent = 'edit';
+                            icon.onclick = () => enableEdit(inputId);
+
+                            // Remove emoji button
+                            const emojiButton = valueRow.querySelector('.profile-emoji-btn');
+                            if (emojiButton) emojiButton.remove();
+
+                            // Clear currently editing
+                            currentlyEditingField = null;
+
+                            saveProfile();
+                        };
+                    }
+                }
+            }
+
+            // Open emoji picker for profile inputs
+            function openProfileEmojiPicker(inputId, buttonElement) {
+                console.log('🎨 Emoji picker clicked for:', inputId);
+                const input = document.getElementById(inputId);
+                if (!input) {
+                    console.error('❌ Input element not found:', inputId);
+                    return;
+                }
+                if (!window.emojiPicker) {
+                    console.error('❌ Emoji picker not initialized');
+                    return;
+                }
+                console.log('✅ Opening emoji picker...');
+
+                // Store current target input
+                window.currentProfileInput = input;
+
+                // Temporarily override insertEmoji to target profile input
+                const originalInsert = window.emojiPicker.insertEmoji.bind(window.emojiPicker);
+                window.emojiPicker.insertEmoji = function (emoji) {
+                    if (window.currentProfileInput) {
+                        const start = window.currentProfileInput.selectionStart || 0;
+                        const end = window.currentProfileInput.selectionEnd || 0;
+                        const text = window.currentProfileInput.value;
+
+                        window.currentProfileInput.value = text.substring(0, start) + emoji + text.substring(end);
+
+                        const newPos = start + emoji.length;
+                        window.currentProfileInput.setSelectionRange(newPos, newPos);
+                        window.currentProfileInput.focus();
+                    }
+                };
+
+                // Open picker near the button
+                window.emojiPicker.open(buttonElement);
+
+                // Restore original insertEmoji when picker closes
+                const originalClose = window.emojiPicker.close.bind(window.emojiPicker);
+                window.emojiPicker.close = function () {
+                    window.emojiPicker.insertEmoji = originalInsert;
+                    window.emojiPicker.close = originalClose;
+                    window.currentProfileInput = null;
+                    originalClose();
+                };
+            }
+
+            // Settings Modal
+            function closeSettingsModal() {
+                document.getElementById('settings-modal').classList.remove('active');
+            }
+
+            window.openSettingsModal = async function () {
+                // Close other modals first
+                document.getElementById('profile-modal').classList.remove('active');
+                document.getElementById('users-modal').classList.remove('active');
+                document.getElementById('blocked-users-modal').classList.remove('active');
+                document.getElementById('calls-modal').classList.remove('active'); // Close Calls
+
+                document.getElementById('settings-modal').classList.add('active');
+
+                // Populate user details
+                const currentUser = window.fireflyChat?.currentUser;
+                if (currentUser) {
+                    const settingsAvatar = document.getElementById('settings-user-avatar');
+                    const settingsName = document.getElementById('settings-user-name');
+                    const settingsAbout = document.getElementById('settings-user-about');
+
+                    if (settingsAvatar) {
+                        settingsAvatar.src = currentUser.profilePicture || 'anony.jpg';
+                    }
+                    if (settingsName) {
+                        settingsName.textContent = currentUser.name || currentUser.username || 'User';
+                    }
+                    if (settingsAbout) {
+                        // Try to get about from Firebase
+                        if (window.messageRouter?.database && currentUser.uid) {
+                            try {
+                                const userRef = window.messageRouter.database.ref(`users/${currentUser.uid}/about`);
+                                const snapshot = await userRef.once('value');
+                                const about = snapshot.val();
+                                settingsAbout.textContent = about || 'Hey there! I am using SynqX.';
+                            } catch (e) {
+                                settingsAbout.textContent = 'Hey there! I am using SynqX.';
+                            }
+                        } else {
+                            settingsAbout.textContent = 'Hey there! I am using SynqX.';
+                        }
+                    }
+                }
+
+                // Load settings from Firebase
+                if (window.settingsManager) {
+                    await window.settingsManager.loadSettings();
+                }
+            }
+
+                ;
+
+            async function saveSettings() {
+                if (window.settingsManager) {
+                    const settings = window.settingsManager.getSettingsFromUI();
+                    const success = await window.settingsManager.saveSettings(settings);
+
+                    if (success && window.fireflyChat) {
+                        window.fireflyChat.showNotification('Settings saved!', 'success');
+                        closeSettingsModal();
+                    }
+
+                    else {
+                        window.fireflyChat?.showNotification('Failed to save settings', 'error');
+                    }
+                }
+            }
+
+            // Add event listeners to toggle switches for auto-save
+            function initializeSettingsToggles() {
+                const toggles = [
+                    'dark-mode-toggle',
+                    'sound-toggle',
+                    'desktop-notif-toggle',
+                    'chat-backup-toggle'
+                ];
+
+                toggles.forEach(toggleId => {
+                    const toggle = document.getElementById(toggleId);
+                    if (toggle) {
+                        toggle.addEventListener('change', async function () {
+                            if (window.settingsManager) {
+                                const settings = window.settingsManager.getSettingsFromUI();
+                                const success = await window.settingsManager.saveSettings(settings);
+
+                                if (success && window.fireflyChat) {
+                                    // Show subtle confirmation
+                                    window.fireflyChat.showNotification('Setting updated', 'success');
+                                }
+                            }
+                        });
+                    }
+                });
+
+                console.log('✅ Settings toggles initialized');
+            }
+
+            // Initialize toggles when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initializeSettingsToggles);
+            } else {
+                initializeSettingsToggles();
+            }
+
+            // Users Modal
+            function closeUsersModal() {
+                document.getElementById('users-modal').classList.remove('active');
+            }
+
+            window.openUsersModal = async function () {
+                // Close other modals first
+                document.getElementById('profile-modal').classList.remove('active');
+                document.getElementById('settings-modal').classList.remove('active');
+                document.getElementById('blocked-users-modal').classList.remove('active');
+                document.getElementById('calls-modal').classList.remove('active'); // Close Calls
+
+                const modal = document.getElementById('users-modal');
+                modal.classList.add('active');
+                await loadAllUsers();
+            }
+
+                ;
+
+            async function loadAllUsers() {
+                const usersList = document.getElementById('users-list');
+                usersList.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="loading-spinner" style="width: 40px; height: 40px; margin: 0 auto;"></div><p style="margin-top: 12px;">Loading users...</p></div>';
+
+                try {
+                    if (window.messageRouter && window.messageRouter.database) {
+                        const usersRef = window.messageRouter.database.ref('users');
+                        const snapshot = await usersRef.once('value');
+
+                        usersList.innerHTML = '';
+
+                        const currentUid = window.fireflyChat?.currentUser?.uid || localStorage.getItem('userId');
+
+                        snapshot.forEach((child) => {
+                            const user = child.val();
+                            user.uid = child.key; // Ensure UID is set for consistent contact matching
+
+                            // Skip self
+                            if (child.key === currentUid || user.uid === currentUid) return;
+
+                            const userDiv = document.createElement('div');
+                            userDiv.className = 'user-list-item';
+
+                            userDiv.innerHTML = `
+                                    <div class="user-list-avatar"><img src="${user.profilePicture || 'anony.jpg'}" alt="${user.name}"></div>
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 600;">${user.name || user.username}</div>
+                                        <div style="font-size: 12px; opacity: 0.7;">@${user.username || user.name}</div>
+                                    </div>
+                                `;
+
+                            userDiv.onclick = () => {
+                                if (window.fireflyChat) {
+                                    // Auto-paste username
+                                    const input = document.getElementById('username-input');
+                                    if (input) input.value = user.username || user.name;
+
+                                    // Connect
+                                    window.fireflyChat.addToContacts(user);
+                                    window.fireflyChat.openChatWithPeer(user);
+                                    closeUsersModal();
+                                }
+                            }
+
+                                ;
+                            usersList.appendChild(userDiv);
+                        });
+                    }
+
+                    else {
+                        usersList.innerHTML = '<p style="text-align: center; opacity: 0.7;">Firebase not available</p>';
+                    }
+                }
+
+                catch (error) {
+                    console.error('Error loading users:', error);
+                    usersList.innerHTML = '<p style="text-align: center; opacity: 0.7;">Error loading users</p>';
+                }
+            }
+
+            // Blocked Users Modal (Sidebar Panel)
+            function closeBlockedModal() {
+                document.getElementById('blocked-users-modal').classList.remove('active');
+            }
+
+            window.openBlockedModal = function () {
+                // Close other modals first
+                document.getElementById('profile-modal').classList.remove('active');
+                document.getElementById('settings-modal').classList.remove('active');
+                document.getElementById('users-modal').classList.remove('active');
+                document.getElementById('calls-modal').classList.remove('active'); // Close Calls
+
+                document.getElementById('blocked-users-modal').classList.add('active');
+                if (window.fireflyChat) window.fireflyChat.loadBlockedUsers();
+            }
+
+            // Main Menu Toggle
+            window.toggleMainMenu = function () {
+                const menu = document.getElementById('main-menu-dropdown');
+                if (menu.style.display === 'none') {
+                    menu.style.display = 'block';
+                    // Close on click outside
+                    setTimeout(() => {
+                        document.addEventListener('click', closeMainMenu);
+                    }, 10);
+                } else {
+                    menu.style.display = 'none';
+                }
+            }
+            function closeMainMenu(e) {
+                const menu = document.getElementById('main-menu-dropdown');
+                if (!menu.contains(e.target)) {
+                    menu.style.display = 'none';
+                    document.removeEventListener('click', closeMainMenu);
+                }
+            }
+
+            // Confirm Block Modal
+            let pendingBlockUid = null;
+
+            window.openConfirmBlockModal = function (uid) {
+                pendingBlockUid = uid;
+                document.getElementById('confirm-block-modal').style.display = 'flex';
+            }
+
+                ;
+
+            function closeConfirmBlockModal() {
+                pendingBlockUid = null;
+                document.getElementById('confirm-block-modal').style.display = 'none';
+            }
+
+            async function confirmBlockUser() {
+                if (pendingBlockUid && window.fireflyChat) {
+                    await window.fireflyChat.blockUser(pendingBlockUid);
+                    closeConfirmBlockModal();
+                    closeUsersModal(); // Close other modals if open
+
+                    // If we were on the info panel or chat, those will be handled by blockUser logic
+                }
+            }
+
+            // Native Emoji Picker Trigger
+            function triggerNativeEmoji() {
+                const messageInput = document.getElementById('message-input');
+
+                if (messageInput) {
+                    messageInput.focus();
+
+                    // Detect OS and show appropriate shortcut
+                    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+                    const shortcut = isMac ? 'Cmd+Ctrl+Space' : 'Win+.';
+
+                    // Show brief notification
+                    if (window.fireflyChat) {
+                        window.fireflyChat.showNotification(`Press $ {
+                                    shortcut
+                                }
+
+                                for emojis`, 'info');
+                    }
+                }
+            }
+
+            // Call History Panel Functions (Sidebar Panel Logic)
+            window.openCallsModal = function () {
+                // Close other sidebar panels explicitly
+                const panels = ['users-modal', 'settings-modal', 'profile-modal', 'blocked-users-modal'];
+                panels.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.remove('active');
+                });
+
+                // Close Info Panel (Right side) if open, to avoid confusion
+                const infoPanel = document.querySelector('.chat-info');
+                if (infoPanel) infoPanel.classList.remove('active');
+
+                const panel = document.getElementById('calls-modal');
+                if (panel) {
+                    panel.classList.add('active'); // Activate Sidebar Panel
+                    if (window.audioCallManager) {
+                        window.audioCallManager.loadCallHistory();
+                    }
+                }
+            }
+
+            window.closeCallsModal = function () {
+                const panel = document.getElementById('calls-modal');
+                if (panel) panel.classList.remove('active');
+            }
+            window.onclick = function (event) {
+                const modals = ['users-modal', 'settings-modal', 'profile-modal', 'calls-modal'];
+                modals.forEach(id => {
+                    const modal = document.getElementById(id);
+                    if (event.target == modal) {
+                        modal.style.display = "none";
+                    }
+                });
+            }
+
+        </script>
+
+        <!-- Old Calls Modal Removed -->
+        <script src="emoji-picker.js"></script>
+        <script src="audio-call.js"></script>
+</body>
+
+</html>
+<script>
+    // Toggle chat header menu
+    window.toggleChatMenu = function () {
+        const menu = document.getElementById('chat-header-menu');
+        if (menu) {
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+    };
+
+    // Placeholder functions for calls
+    window.startVideoCall = function () {
+        alert('Video call feature coming soon!');
+    };
+
+    // startAudioCall is now provided by audio-call.js
+
+    window.toggleSearchInChat = function () {
+        alert('Search in chat feature coming soon!');
+    };</script>
+<script>
+    // Debug GIF scrolling
+    window.debugGifScroll = function () {
+        const grid = document.getElementById('emoji-grid');
+        if (!grid) {
+            console.log('Grid not found');
+            return;
+        }
+        console.log('Grid styles:');
+        console.log('- overflow-y:', window.getComputedStyle(grid).overflowY);
+        console.log('- height:', grid.offsetHeight + 'px');
+        console.log('- scrollHeight:', grid.scrollHeight + 'px');
+        console.log('- clientHeight:', grid.clientHeight + 'px');
+        console.log('- Can scroll:', grid.scrollHeight > grid.clientHeight);
+
+        const picker = grid.closest('.emoji-picker');
+        if (picker) {
+            console.log('Picker styles:');
+            console.log('- display:', window.getComputedStyle(picker).display);
+            console.log('- flex-direction:', window.getComputedStyle(picker).flexDirection);
+            console.log('- height:', picker.offsetHeight + 'px');
+        }
+    };
+    console.log('Run debugGifScroll() to check scrolling');</script>

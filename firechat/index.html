@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Verification</title>
+    <link rel="icon" href="auth.png" type="image/x-icon">
+<link rel="stylesheet" href="verify.css" />
+</head>
+<body>
+    <div class="container">
+        <h1>Secure Verification</h1>
+        <p id="status-message">Verifying system...</p>
+        <div class="loader" id="loader"></div>
+        <div id="error-message">Verification Failed</div>
+        <div id="verification-details" class="verification-details" style="display:none;">
+            <h3>Verification Checks</h3>
+            <div id="security-checks"></div>
+            <div class="progress-bar">
+                <div id="progress-bar-fill" class="progress-bar-fill"></div>
+            </div>
+            <h6>Powered by: Fire-Auth <br>Version 2.1.0.1</h6>
+        </div>
+    </div>
+<script src="verify.js"></script>
+</body>
+</html>
