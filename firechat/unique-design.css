@@ -162,7 +162,8 @@ body {
     top: 0;
     left: 0;
     width: 100%;
-    height: 100%;
+    height: 100vh;
+    /* Auto-adjust to screen height */
     background: var(--bg-sidebar);
     z-index: 50;
     transform: translateX(-110%);
@@ -170,6 +171,7 @@ body {
     display: flex;
     flex-direction: column;
     border-right: 1px solid rgba(255, 255, 255, 0.05);
+    overflow: hidden;
 }
 
 .sidebar-panel.active {
@@ -1059,9 +1061,10 @@ body {
 .sidebar-panel {
     position: absolute;
     top: 0;
-    bottom: 0;
     left: var(--sidebar-width);
     width: var(--contacts-width);
+    height: 100vh;
+    /* Auto-adjust to screen height */
     background: #111b21;
     z-index: 50;
     transform: translateX(-110%);
@@ -1070,6 +1073,7 @@ body {
     border-right: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .sidebar-panel-header {
@@ -1086,9 +1090,16 @@ body {
 }
 
 .sidebar-panel-content {
-    flex: 1;
+    flex: 1 1 auto;
     overflow-y: auto;
+    overflow-x: hidden;
     background: #111b21;
+    min-height: 0;
+    /* Important for flex children to shrink and allow scrolling */
+    max-height: calc(100vh - 60px);
+    /* 60px is header height */
+    padding-bottom: 20px;
+    /* Safe area at bottom */
 }
 
 /* Custom Notification Toast */
