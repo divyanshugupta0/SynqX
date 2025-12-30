@@ -731,587 +731,590 @@
                 <i class="material-icons">mic</i>
             </button>
         </div>
+
+        <!-- Info Panel (hidden by default) -->
+        <aside class="chat-info" id="info-panel" style="display: none;">
+            <div class="info-header">
+                <i class="material-icons" onclick="toggleInfoPanel()" style="cursor: pointer; color: #8696a0;">close</i>
+                <h2>Contact info</h2>
+            </div>
+
+            <div class="info-content">
+                <div class="info-profile">
+                    <div class="info-avatar">
+                        <img src="anony.jpg" alt="User" id="peer-avatar">
+                    </div>
+                    <div class="info-name-large" id="peer-name">User</div>
+                    <div class="info-phone" id="peer-username-display">@username</div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-section-title">About</div>
+                    <div class="info-text-value" id="peer-about">Hey there! I am using SynqX.</div>
+                </div>
+
+                <div class="info-card">
+                    <div class="media-preview-header" onclick="openMediaGallery()" style="cursor: pointer;">
+                        <span>Media, links and docs</span>
+                        <div style="display: flex; align-items: center; gap: 4px; font-size: 13px;">
+                            <span class="media-count" id="media-count">0</span>
+                            <i class="material-icons">chevron_right</i>
+                        </div>
+                    </div>
+                    <div class="media-grid" id="media-grid">
+                        <!-- Media items will be populated here -->
+                        <div
+                            style="grid-column: 1/-1; text-align: center; color: #8696a0; font-size: 13px; padding: 10px;">
+                            No media shared
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <div class="action-item">
+                        <i class="material-icons-outlined">star</i>
+                        <div class="action-text">Starred messages</div>
+                        <i class="material-icons" style="font-size: 16px;">chevron_right</i>
+                    </div>
+                    <div class="action-item">
+                        <i class="material-icons-outlined">notifications</i>
+                        <div class="action-text">Notification settings</div>
+                        <i class="material-icons" style="font-size: 16px;">chevron_right</i>
+                    </div>
+                    <div class="action-item">
+                        <i class="material-icons-outlined">lock</i>
+                        <div class="action-text">
+                            <div>Encryption</div>
+                            <div class="action-sub">Messages are end-to-end encrypted.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-card" style="margin-bottom: 20px;">
+                    <div class="action-item danger" onclick="clearChat()">
+                        <i class="material-icons-outlined">delete</i>
+                        <div class="action-text">Clear chat</div>
+                    </div>
+                    <div class="action-item danger" onclick="endChat()">
+                        <i class="material-icons-outlined">block</i>
+                        <div class="action-text">Block User</div>
+                    </div>
+                    <div class="action-item danger">
+                        <i class="material-icons-outlined">thumb_down</i>
+                        <div class="action-text">Report User</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Media Gallery View (Hidden by default) -->
+            <div id="media-gallery-view" class="media-gallery-view" style="display: none;">
+                <div class="gallery-header">
+                    <div class="gallery-nav">
+                        <i class="material-icons" onclick="closeMediaGallery()">arrow_back</i>
+                        <span id="gallery-peer-name">Contact Info</span>
+                    </div>
+                    <div class="gallery-tabs">
+                        <div class="gallery-tab active" onclick="switchGalleryTab('media')">Media</div>
+                        <div class="gallery-tab" onclick="switchGalleryTab('docs')">Docs</div>
+                        <div class="gallery-tab" onclick="switchGalleryTab('links')">Links</div>
+                    </div>
+                </div>
+                <div class="gallery-content">
+                    <div id="gallery-media" class="gallery-section" style="display: block;">
+                        <!-- Media Grid -->
+                    </div>
+                    <div id="gallery-docs" class="gallery-section" style="display: none;">
+                        <!-- Docs List -->
+                    </div>
+                    <div id="gallery-links" class="gallery-section" style="display: none;">
+                        <!-- Links List -->
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+    <!-- End of .chat-app -->
+
+
+
+    <!-- Notification Toast -->
+    <div id="notification" class="notification-toast"></div>
+
+    <!-- Loading Overlay -->
+    <!-- Loading Overlay -->
+    <div id="loading" class="loading-overlay" style="display: none;">
+        <div class="loader-content">
+            <img src="chat.png" alt="SynqX" style="width: 80px; height: 80px; margin-bottom: 24px;">
+            <h2 style="font-weight: 500; font-size: 22px; color: #e9edef; margin-bottom: 32px;">SynqX
+            </h2>
+            <div class="loader-progress"></div>
+        </div>
+        <div class="loader-footer">
+            <i class="material-icons" style="font-size: 12px; margin-right: 6px;">lock</i>
+            <span>End-to-end encrypted</span>
+        </div>
     </div>
 
-    <!-- Info Panel (hidden by default) -->
-    <aside class="chat-info" id="info-panel" style="display: none;">
-        <div class="info-header">
-            <i class="material-icons" onclick="toggleInfoPanel()" style="cursor: pointer; color: #8696a0;">close</i>
-            <h2>Contact info</h2>
+    <!-- Scripts -->
+    <script src="firebase-config.js"></script>
+    <script src="auth-check.js"></script>
+    <script src="message-router.js"></script>
+    <script src="settings-manager.js"></script>
+    <script src="profile-manager.js"></script>
+    <script src="emoji-picker.js"></script>
+    <script src="modern-chat.js"></script>
+    <script src="audio-call.js"></script>
+    <script src="audio-chat.js"></script>
+    <script src="advanced-features.js"></script>
+    <script src="mobile-ui.js"></script>
+
+    <style>
+        /* Additional inline styles for modals and overlays */
+        .profile-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+        }
+
+
+
+        .app-container {
+            position: relative;
+        }
+
+        .modal-content {
+            background: rgba(21, 26, 54, 0.98);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-content h2 {
+            background: linear-gradient(135deg, #ff006e, #8b5cf6, #00d9ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 24px;
+        }
+
+        .profile-img-container {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto;
+            border-radius: 24px;
+            background: linear-gradient(135deg, #ff006e, #8b5cf6, #00d9ff);
+            padding: 3px;
+            overflow: hidden;
+        }
+
+        .profile-img-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 21px;
+        }
+
+        .modal-content label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .modal-content input[type="text"],
+        .modal-content input[type="file"] {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: white;
+            font-family: inherit;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-save,
+        .btn-cancel {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-save {
+            background: linear-gradient(135deg, #ff006e, #8b5cf6, #00d9ff);
+        }
+
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 0, 110, 0.4);
+        }
+
+        .btn-cancel {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-cancel:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+
+
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #00d9ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .connect-btn-small {
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #ff006e, #8b5cf6, #00d9ff);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .connect-btn-small:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 0, 110, 0.4);
+        }
+
+        #profile-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+
+        /* Settings Items */
+        .settings-section {
+            margin-bottom: 20px;
+        }
+
+        .settings-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 34px;
+            transition: 0.3s;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        .toggle-switch input:checked+.toggle-slider {
+            background: #00a884;
+        }
+
+        .toggle-switch input:checked+.toggle-slider:before {
+            transform: translateX(24px);
+        }
+
+
+        /* User List Item */
+        .user-list-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .user-list-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(0, 217, 255, 0.3);
+        }
+
+        .user-list-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: linear-gradient(135deg, #ff006e, #8b5cf6);
+        }
+
+        .user-list-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    </style>
+
+
+
+    <div id="block-list-modal" class="profile-modal" style="display: none;">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 24px;">Blocked Users</h2>
+            <div id="blocked-users-list" style="max-height: 400px; overflow-y: auto;">
+                < !-- Blocked users loaded here -->
+                    <p style="text-align: center; opacity: 0.6;">No blocked users</p>
+            </div>
+            <div class="modal-buttons" style="margin-top: 24px;"><button onclick="closeBlockListModal()"
+                    class="btn-cancel">Close</button></div>
         </div>
+    </div>
 
-        <div class="info-content">
-            <div class="info-profile">
-                <div class="info-avatar">
-                    <img src="anony.jpg" alt="User" id="peer-avatar">
-                </div>
-                <div class="info-name-large" id="peer-name">User</div>
-                <div class="info-phone" id="peer-username-display">@username</div>
-            </div>
-
-            <div class="info-card">
-                <div class="info-section-title">About</div>
-                <div class="info-text-value" id="peer-about">Hey there! I am using SynqX.</div>
-            </div>
-
-            <div class="info-card">
-                <div class="media-preview-header" onclick="openMediaGallery()" style="cursor: pointer;">
-                    <span>Media, links and docs</span>
-                    <div style="display: flex; align-items: center; gap: 4px; font-size: 13px;">
-                        <span class="media-count" id="media-count">0</span>
-                        <i class="material-icons">chevron_right</i>
-                    </div>
-                </div>
-                <div class="media-grid" id="media-grid">
-                    <!-- Media items will be populated here -->
-                    <div style="grid-column: 1/-1; text-align: center; color: #8696a0; font-size: 13px; padding: 10px;">
-                        No media shared
-                    </div>
-                </div>
-            </div>
-
-            <div class="info-card">
-                <div class="action-item">
-                    <i class="material-icons-outlined">star</i>
-                    <div class="action-text">Starred messages</div>
-                    <i class="material-icons" style="font-size: 16px;">chevron_right</i>
-                </div>
-                <div class="action-item">
-                    <i class="material-icons-outlined">notifications</i>
-                    <div class="action-text">Notification settings</div>
-                    <i class="material-icons" style="font-size: 16px;">chevron_right</i>
-                </div>
-                <div class="action-item">
-                    <i class="material-icons-outlined">lock</i>
-                    <div class="action-text">
-                        <div>Encryption</div>
-                        <div class="action-sub">Messages are end-to-end encrypted.</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="info-card" style="margin-bottom: 20px;">
-                <div class="action-item danger" onclick="clearChat()">
-                    <i class="material-icons-outlined">delete</i>
-                    <div class="action-text">Clear chat</div>
-                </div>
-                <div class="action-item danger" onclick="endChat()">
-                    <i class="material-icons-outlined">block</i>
-                    <div class="action-text">Block User</div>
-                </div>
-                <div class="action-item danger">
-                    <i class="material-icons-outlined">thumb_down</i>
-                    <div class="action-text">Report User</div>
-                </div>
-            </div>
+    <div id="confirm-block-modal" class="profile-modal" style="display: none; z-index: 3100;">
+        <div class="modal-content" style="max-width: 400px; text-align: center;"><i class="material-icons"
+                style="font-size: 48px; color: #ff006e; margin-bottom: 16px;">block</i>
+            <h2 style="margin-bottom: 12px; color: #ff006e !important;">Block User?</h2>
+            <p style="opacity: 0.8; margin-bottom: 24px;">This will delete all chat history,
+                remove them from your contacts,
+                and prevent them from messaging you. They will NOT be notified. </p>
+            <div class="modal-buttons"><button onclick="confirmBlockUser()" class="btn-save"
+                    style="background: #ff006e;">Block</button><button onclick="closeConfirmBlockModal()"
+                    class="btn-cancel">Cancel</button></div>
         </div>
+    </div>
+    <style>
+        /* Contact Item Styles */
+        .contact-item {
+            position: relative;
+        }
 
-        <!-- Media Gallery View (Hidden by default) -->
-        <div id="media-gallery-view" class="media-gallery-view" style="display: none;">
-            <div class="gallery-header">
-                <div class="gallery-nav">
-                    <i class="material-icons" onclick="closeMediaGallery()">arrow_back</i>
-                    <span id="gallery-peer-name">Contact Info</span>
-                </div>
-                <div class="gallery-tabs">
-                    <div class="gallery-tab active" onclick="switchGalleryTab('media')">Media</div>
-                    <div class="gallery-tab" onclick="switchGalleryTab('docs')">Docs</div>
-                    <div class="gallery-tab" onclick="switchGalleryTab('links')">Links</div>
-                </div>
-            </div>
-            <div class="gallery-content">
-                <div id="gallery-media" class="gallery-section" style="display: block;">
-                    <!-- Media Grid -->
-                </div>
-                <div id="gallery-docs" class="gallery-section" style="display: none;">
-                    <!-- Docs List -->
-                </div>
-                <div id="gallery-links" class="gallery-section" style="display: none;">
-                    <!-- Links List -->
-                </div>
-            </div>
+        /* Menu Button */
+        .contact-menu-btn {
+            opacity: 0;
+            padding: 8px;
+            cursor: pointer;
+            border-radius: 50%;
+            transition: 0.2s;
+            color: rgba(255, 255, 255, 0.6);
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 5;
+        }
+
+        .contact-item:hover .contact-menu-btn {
+            opacity: 1;
+        }
+
+        .contact-menu-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        /* Context Menu */
+        .context-menu {
+            position: absolute;
+            right: 10px;
+            top: 40px;
+            background: #1a1f3c;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 6px;
+            min-width: 160px;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            display: none;
+            backdrop-filter: blur(10px);
+        }
+
+        .context-menu.active {
+            display: block;
+        }
+
+        .context-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .unread-badge {
+            background: #ff006e;
+            color: white;
+            border-radius: 12px;
+            /* Pill shape */
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-left: 8px;
+            box-shadow: 0 2px 5px rgba(255, 0, 110, 0.3);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0);
+            }
+
+            to {
+                transform: scale(1);
+            }
+        }
+
+        .context-menu-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: white;
+        }
+
+        .context-menu-item.danger {
+            color: #ff006e;
+        }
+
+        .context-menu-item.danger:hover {
+            background: rgba(255, 0, 110, 0.1);
+        }
+
+        /* Blocked User Item */
+        .blocked-user-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background: rgba(255, 0, 110, 0.05);
+            border: 1px solid rgba(255, 0, 110, 0.1);
+            border-radius: 12px;
+            margin-bottom: 8px;
+        }
+
+        .unblock-btn {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+            transition: 0.2s;
+        }
+
+        .unblock-btn:hover {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+    </style>
+
+    <!-- Global Context Menu -->
+    <div id="contact-context-menu" class="context-menu">
+        <div class="context-menu-item" onclick="handleContextMenuAction('profile')">
+            <i class="material-icons" style="font-size: 16px;">person</i>
+            <span>View Profile</span>
         </div>
-
-
-
-        <!-- Notification Toast -->
-        <div id="notification" class="notification-toast"></div>
-
-        <!-- Loading Overlay -->
-        <!-- Loading Overlay -->
-        <div id="loading" class="loading-overlay" style="display: none;">
-            <div class="loader-content">
-                <img src="chat.png" alt="SynqX" style="width: 80px; height: 80px; margin-bottom: 24px;">
-                <h2 style="font-weight: 500; font-size: 22px; color: #e9edef; margin-bottom: 32px;">SynqX
-                </h2>
-                <div class="loader-progress"></div>
-            </div>
-            <div class="loader-footer">
-                <i class="material-icons" style="font-size: 12px; margin-right: 6px;">lock</i>
-                <span>End-to-end encrypted</span>
-            </div>
+        <div class="context-menu-item" onclick="handleContextMenuAction('disconnect')">
+            <i class="material-icons" style="font-size: 16px;">link_off</i>
+            <span>Disconnect</span>
         </div>
-
-        <!-- Scripts -->
-        <script src="firebase-config.js"></script>
-        <script src="auth-check.js"></script>
-        <script src="message-router.js"></script>
-        <script src="settings-manager.js"></script>
-        <script src="profile-manager.js"></script>
-        <script src="emoji-picker.js"></script>
-        <script src="modern-chat.js"></script>
-        <script src="audio-call.js"></script>
-        <script src="audio-chat.js"></script>
-        <script src="advanced-features.js"></script>
-        <script src="mobile-ui.js"></script>
-
-        <style>
-            /* Additional inline styles for modals and overlays */
-            .profile-modal {
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.85);
-                backdrop-filter: blur(10px);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 3000;
-            }
-
-
-
-            .app-container {
-                position: relative;
-            }
-
-            .modal-content {
-                background: rgba(21, 26, 54, 0.98);
-                backdrop-filter: blur(20px);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 24px;
-                padding: 32px;
-                max-width: 500px;
-                width: 90%;
-                max-height: 90vh;
-                overflow-y: auto;
-            }
-
-            .modal-content h2 {
-                background: linear-gradient(135deg, #ff006e, #8b5cf6, #00d9ff);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                background-clip: text;
-                font-size: 24px;
-            }
-
-            .profile-img-container {
-                width: 120px;
-                height: 120px;
-                margin: 0 auto;
-                border-radius: 24px;
-                background: linear-gradient(135deg, #ff006e, #8b5cf6, #00d9ff);
-                padding: 3px;
-                overflow: hidden;
-            }
-
-            .profile-img-container img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-                border-radius: 21px;
-            }
-
-            .modal-content label {
-                display: block;
-                margin-bottom: 8px;
-                font-size: 14px;
-                opacity: 0.8;
-            }
-
-            .modal-content input[type="text"],
-            .modal-content input[type="file"] {
-                width: 100%;
-                padding: 12px 16px;
-                background: rgba(255, 255, 255, 0.05);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 12px;
-                color: white;
-                font-family: inherit;
-            }
-
-            .modal-buttons {
-                display: flex;
-                gap: 12px;
-            }
-
-            .btn-save,
-            .btn-cancel {
-                flex: 1;
-                padding: 14px;
-                border: none;
-                border-radius: 12px;
-                color: white;
-                font-weight: 600;
-                cursor: pointer;
-                transition: 0.3s;
-            }
-
-            .btn-save {
-                background: linear-gradient(135deg, #ff006e, #8b5cf6, #00d9ff);
-            }
-
-            .btn-save:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 20px rgba(255, 0, 110, 0.4);
-            }
-
-            .btn-cancel {
-                background: rgba(255, 255, 255, 0.08);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-            }
-
-            .btn-cancel:hover {
-                background: rgba(255, 255, 255, 0.12);
-            }
-
-
-
-            .loading-overlay {
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.85);
-                backdrop-filter: blur(10px);
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                z-index: 3000;
-            }
-
-            .loading-spinner {
-                width: 60px;
-                height: 60px;
-                border: 3px solid rgba(255, 255, 255, 0.1);
-                border-top: 3px solid #00d9ff;
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-                margin-bottom: 20px;
-            }
-
-            @keyframes spin {
-                from {
-                    transform: rotate(0deg);
-                }
-
-                to {
-                    transform: rotate(360deg);
-                }
-            }
-
-            .connect-btn-small {
-                padding: 12px 16px;
-                background: linear-gradient(135deg, #ff006e, #8b5cf6, #00d9ff);
-                border: none;
-                border-radius: 12px;
-                color: white;
-                cursor: pointer;
-                transition: 0.3s;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            .connect-btn-small:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 20px rgba(255, 0, 110, 0.4);
-            }
-
-            #profile-icon img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-                border-radius: 12px;
-            }
-
-            /* Settings Items */
-            .settings-section {
-                margin-bottom: 20px;
-            }
-
-            .settings-item {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 12px 0;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            }
-
-            /* Toggle Switch */
-            .toggle-switch {
-                position: relative;
-                width: 50px;
-                height: 26px;
-            }
-
-            .toggle-switch input {
-                opacity: 0;
-                width: 0;
-                height: 0;
-            }
-
-            .toggle-slider {
-                position: absolute;
-                cursor: pointer;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background-color: rgba(255, 255, 255, 0.1);
-                border-radius: 34px;
-                transition: 0.3s;
-            }
-
-            .toggle-slider:before {
-                position: absolute;
-                content: "";
-                height: 20px;
-                width: 20px;
-                left: 3px;
-                bottom: 3px;
-                background-color: white;
-                border-radius: 50%;
-                transition: 0.3s;
-            }
-
-            .toggle-switch input:checked+.toggle-slider {
-                background: #00a884;
-            }
-
-            .toggle-switch input:checked+.toggle-slider:before {
-                transform: translateX(24px);
-            }
-
-
-            /* User List Item */
-            .user-list-item {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                padding: 12px;
-                background: rgba(255, 255, 255, 0.03);
-                border: 1px solid rgba(255, 255, 255, 0.05);
-                border-radius: 12px;
-                margin-bottom: 8px;
-                cursor: pointer;
-                transition: 0.2s;
-            }
-
-            .user-list-item:hover {
-                background: rgba(255, 255, 255, 0.08);
-                border-color: rgba(0, 217, 255, 0.3);
-            }
-
-            .user-list-avatar {
-                width: 48px;
-                height: 48px;
-                border-radius: 12px;
-                overflow: hidden;
-                background: linear-gradient(135deg, #ff006e, #8b5cf6);
-            }
-
-            .user-list-avatar img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-            }
-        </style>
-
-
-
-        <div id="block-list-modal" class="profile-modal" style="display: none;">
-            <div class="modal-content">
-                <h2 style="margin-bottom: 24px;">Blocked Users</h2>
-                <div id="blocked-users-list" style="max-height: 400px; overflow-y: auto;">
-                    < !-- Blocked users loaded here -->
-                        <p style="text-align: center; opacity: 0.6;">No blocked users</p>
-                </div>
-                <div class="modal-buttons" style="margin-top: 24px;"><button onclick="closeBlockListModal()"
-                        class="btn-cancel">Close</button></div>
-            </div>
+        <div class="context-menu-item" onclick="handleContextMenuAction('delete')">
+            <i class="material-icons" style="font-size: 16px;">delete</i>
+            <span>Delete Chat</span>
         </div>
-
-        <div id="confirm-block-modal" class="profile-modal" style="display: none; z-index: 3100;">
-            <div class="modal-content" style="max-width: 400px; text-align: center;"><i class="material-icons"
-                    style="font-size: 48px; color: #ff006e; margin-bottom: 16px;">block</i>
-                <h2 style="margin-bottom: 12px; color: #ff006e !important;">Block User?</h2>
-                <p style="opacity: 0.8; margin-bottom: 24px;">This will delete all chat history,
-                    remove them from your contacts,
-                    and prevent them from messaging you. They will NOT be notified. </p>
-                <div class="modal-buttons"><button onclick="confirmBlockUser()" class="btn-save"
-                        style="background: #ff006e;">Block</button><button onclick="closeConfirmBlockModal()"
-                        class="btn-cancel">Cancel</button></div>
-            </div>
+        <div class="context-menu-item danger" onclick="handleContextMenuAction('block')">
+            <i class="material-icons" style="font-size: 16px;">block</i>
+            <span>Block User</span>
         </div>
-        <style>
-            /* Contact Item Styles */
-            .contact-item {
-                position: relative;
-            }
+    </div>
 
-            /* Menu Button */
-            .contact-menu-btn {
-                opacity: 0;
-                padding: 8px;
-                cursor: pointer;
-                border-radius: 50%;
-                transition: 0.2s;
-                color: rgba(255, 255, 255, 0.6);
-                position: absolute;
-                right: 8px;
-                top: 50%;
-                transform: translateY(-50%);
-                z-index: 5;
-            }
+    <script> // Global Modal Functions
 
-            .contact-item:hover .contact-menu-btn {
-                opacity: 1;
-            }
+        // Context Menu Wrapper
+        function handleContextMenuAction(action) {
+            if (window.fireflyChat) window.fireflyChat.handleContextMenuAction(action);
+        }
 
-            .contact-menu-btn:hover {
-                background: rgba(255, 255, 255, 0.1);
-                color: white;
-            }
-
-            /* Context Menu */
-            .context-menu {
-                position: absolute;
-                right: 10px;
-                top: 40px;
-                background: #1a1f3c;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 12px;
-                padding: 6px;
-                min-width: 160px;
-                z-index: 100;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-                display: none;
-                backdrop-filter: blur(10px);
-            }
-
-            .context-menu.active {
-                display: block;
-            }
-
-            .context-menu-item {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                padding: 10px 12px;
-                border-radius: 8px;
-                cursor: pointer;
-                transition: 0.2s;
-                font-size: 13px;
-                color: rgba(255, 255, 255, 0.8);
-            }
-
-            .unread-badge {
-                background: #ff006e;
-                color: white;
-                border-radius: 12px;
-                /* Pill shape */
-                padding: 2px 8px;
-                font-size: 11px;
-                font-weight: 700;
-                margin-left: 8px;
-                box-shadow: 0 2px 5px rgba(255, 0, 110, 0.3);
-                animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            }
-
-            @keyframes popIn {
-                from {
-                    transform: scale(0);
-                }
-
-                to {
-                    transform: scale(1);
-                }
-            }
-
-            .context-menu-item:hover {
-                background: rgba(255, 255, 255, 0.08);
-                color: white;
-            }
-
-            .context-menu-item.danger {
-                color: #ff006e;
-            }
-
-            .context-menu-item.danger:hover {
-                background: rgba(255, 0, 110, 0.1);
-            }
-
-            /* Blocked User Item */
-            .blocked-user-item {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                padding: 12px;
-                background: rgba(255, 0, 110, 0.05);
-                border: 1px solid rgba(255, 0, 110, 0.1);
-                border-radius: 12px;
-                margin-bottom: 8px;
-            }
-
-            .unblock-btn {
-                padding: 6px 12px;
-                background: rgba(255, 255, 255, 0.1);
-                border: none;
-                border-radius: 6px;
-                color: white;
-                cursor: pointer;
-                font-size: 12px;
-                transition: 0.2s;
-            }
-
-            .unblock-btn:hover {
-                background: linear-gradient(135deg, #10b981, #059669);
-            }
-        </style>
-
-        <!-- Global Context Menu -->
-        <div id="contact-context-menu" class="context-menu">
-            <div class="context-menu-item" onclick="handleContextMenuAction('profile')">
-                <i class="material-icons" style="font-size: 16px;">person</i>
-                <span>View Profile</span>
-            </div>
-            <div class="context-menu-item" onclick="handleContextMenuAction('disconnect')">
-                <i class="material-icons" style="font-size: 16px;">link_off</i>
-                <span>Disconnect</span>
-            </div>
-            <div class="context-menu-item" onclick="handleContextMenuAction('delete')">
-                <i class="material-icons" style="font-size: 16px;">delete</i>
-                <span>Delete Chat</span>
-            </div>
-            <div class="context-menu-item danger" onclick="handleContextMenuAction('block')">
-                <i class="material-icons" style="font-size: 16px;">block</i>
-                <span>Block User</span>
-            </div>
-        </div>
-
-        <script> // Global Modal Functions
-
-            // Context Menu Wrapper
-            function handleContextMenuAction(action) {
-                if (window.fireflyChat) window.fireflyChat.handleContextMenuAction(action);
-            }
-
-            // Logout Confirmation Functions (window scope for global access)
-            window.confirmLogout = function () {
-                console.log('confirmLogout called');
-                const modal = document.getElementById('logout-confirm-modal');
-                if (!modal) {
-                    // Create modal if it doesn't exist
-                    const modalHTML = `
+        // Logout Confirmation Functions (window scope for global access)
+        window.confirmLogout = function () {
+            console.log('confirmLogout called');
+            const modal = document.getElementById('logout-confirm-modal');
+            if (!modal) {
+                // Create modal if it doesn't exist
+                const modalHTML = `
                             <div id="logout-confirm-modal" class="modal-overlay" style="display: flex; z-index: 10000;">
                                 <div class="modal-content" style="max-width: 420px; text-align: center; padding: 32px;">
                                     <i class="material-icons" style="font-size: 56px; color: #54656f; margin-bottom: 20px;">logout</i>
@@ -1326,34 +1329,34 @@
                                 </div>
                             </div>
                         `;
-                    document.body.insertAdjacentHTML('beforeend', modalHTML);
-                } else {
-                    modal.style.display = 'flex';
-                }
-            };
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+            } else {
+                modal.style.display = 'flex';
+            }
+        };
 
-            window.closeLogoutConfirm = function () {
-                const modal = document.getElementById('logout-confirm-modal');
-                if (modal) modal.style.display = 'none';
-            };
+        window.closeLogoutConfirm = function () {
+            const modal = document.getElementById('logout-confirm-modal');
+            if (modal) modal.style.display = 'none';
+        };
 
-            window.performLogout = function () {
-                closeLogoutConfirm();
-                if (typeof logout === 'function') {
-                    logout();
-                } else if (window.fireflyChat && typeof window.fireflyChat.logout === 'function') {
-                    window.fireflyChat.logout();
-                } else {
-                    console.error('Logout function not found');
-                }
-            };
+        window.performLogout = function () {
+            closeLogoutConfirm();
+            if (typeof logout === 'function') {
+                logout();
+            } else if (window.fireflyChat && typeof window.fireflyChat.logout === 'function') {
+                window.fireflyChat.logout();
+            } else {
+                console.error('Logout function not found');
+            }
+        };
 
-            // Logout Confirmation Functions
-            function confirmLogout() {
-                const modal = document.getElementById('logout-confirm-modal');
-                if (!modal) {
-                    // Create modal if it doesn't exist
-                    const modalHTML = `
+        // Logout Confirmation Functions
+        function confirmLogout() {
+            const modal = document.getElementById('logout-confirm-modal');
+            if (!modal) {
+                // Create modal if it doesn't exist
+                const modalHTML = `
                             <div id="logout-confirm-modal" class="modal-overlay" style="display: flex;">
                                 <div class="modal-content" style="max-width: 420px; text-align: center; padding: 32px;">
                                     <i class="material-icons" style="font-size: 56px; color: #54656f; margin-bottom: 20px;">logout</i>
@@ -1368,319 +1371,319 @@
                                 </div>
                             </div>
                         `;
-                    document.body.insertAdjacentHTML('beforeend', modalHTML);
-                } else {
-                    modal.style.display = 'flex';
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+            } else {
+                modal.style.display = 'flex';
+            }
+        }
+
+        function closeLogoutConfirm() {
+            const modal = document.getElementById('logout-confirm-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function performLogout() {
+            closeLogoutConfirm();
+            if (typeof logout === 'function') {
+                logout();
+            } else if (window.fireflyChat && typeof window.fireflyChat.logout === 'function') {
+                window.fireflyChat.logout();
+            }
+        }
+
+        // Filter contacts by category
+        function filterContacts(filter) {
+            // Update active chip
+            document.querySelectorAll('.chip').forEach(chip => {
+                chip.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            console.log('Filtering by:', filter);
+
+            // Get all contact items and filter them
+            const contacts = document.querySelectorAll('.contact-item');
+            contacts.forEach(contact => {
+                if (filter === 'all') {
+                    contact.style.display = 'flex';
+                } else if (filter === 'unread') {
+                    const hasUnread = contact.querySelector('.unread-badge');
+                    contact.style.display = hasUnread ? 'flex' : 'none';
+                } else if (filter === 'favourites') {
+                    contact.style.display = contact.dataset.favorite === 'true' ? 'flex' : 'none';
+                } else if (filter === 'groups') {
+                    contact.style.display = contact.dataset.isGroup === 'true' ? 'flex' : 'none';
+                }
+            });
+        }
+
+        // Track currently editing field
+        let currentlyEditingField = null;
+
+        // Enable editing for profile fields
+        function enableEdit(inputId) {
+            // If another field is being edited, close it first
+            if (currentlyEditingField && currentlyEditingField !== inputId) {
+                const previousInput = document.getElementById(currentlyEditingField);
+                if (previousInput) {
+                    previousInput.setAttribute('readonly', 'true');
+                    const prevValueRow = previousInput.parentElement;
+                    const prevIcon = prevValueRow.querySelector('.edit-icon');
+                    if (prevIcon) {
+                        prevIcon.textContent = 'edit';
+                        prevIcon.onclick = () => enableEdit(currentlyEditingField);
+                    }
+                    // Remove emoji button from previous field
+                    const prevEmojiBtn = prevValueRow.querySelector('.profile-emoji-btn');
+                    if (prevEmojiBtn) prevEmojiBtn.remove();
                 }
             }
 
-            function closeLogoutConfirm() {
-                const modal = document.getElementById('logout-confirm-modal');
-                if (modal) modal.style.display = 'none';
-            }
+            const input = document.getElementById(inputId);
+            if (input) {
+                input.removeAttribute('readonly');
+                input.focus(); // Auto-focus to input
 
-            function performLogout() {
-                closeLogoutConfirm();
-                if (typeof logout === 'function') {
-                    logout();
-                } else if (window.fireflyChat && typeof window.fireflyChat.logout === 'function') {
-                    window.fireflyChat.logout();
+                // Mark this field as currently editing
+                currentlyEditingField = inputId;
+
+                // Get the value-row container
+                const valueRow = input.parentElement;
+
+                // Change icon to checkmark while editing
+                const icon = valueRow.querySelector('.edit-icon');
+                if (icon) {
+                    icon.textContent = 'check';
+
+                    // Add emoji button
+                    const emojiBtn = document.createElement('i');
+                    emojiBtn.className = 'material-icons edit-icon profile-emoji-btn';
+                    emojiBtn.textContent = 'emoji_emotions';
+                    emojiBtn.style.marginRight = '8px';
+                    emojiBtn.style.cursor = 'pointer';
+                    emojiBtn.title = 'Add emoji';
+
+                    // Attach click handler
+                    emojiBtn.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+                        openProfileEmojiPicker(inputId, this);
+                    });
+
+                    valueRow.insertBefore(emojiBtn, icon);
+
+                    icon.onclick = () => {
+                        input.setAttribute('readonly', 'true');
+                        icon.textContent = 'edit';
+                        icon.onclick = () => enableEdit(inputId);
+
+                        // Remove emoji button
+                        const emojiButton = valueRow.querySelector('.profile-emoji-btn');
+                        if (emojiButton) emojiButton.remove();
+
+                        // Clear currently editing
+                        currentlyEditingField = null;
+
+                        saveProfile();
+                    };
                 }
             }
+        }
 
-            // Filter contacts by category
-            function filterContacts(filter) {
-                // Update active chip
-                document.querySelectorAll('.chip').forEach(chip => {
-                    chip.classList.remove('active');
-                });
-                event.target.classList.add('active');
-
-                console.log('Filtering by:', filter);
-
-                // Get all contact items and filter them
-                const contacts = document.querySelectorAll('.contact-item');
-                contacts.forEach(contact => {
-                    if (filter === 'all') {
-                        contact.style.display = 'flex';
-                    } else if (filter === 'unread') {
-                        const hasUnread = contact.querySelector('.unread-badge');
-                        contact.style.display = hasUnread ? 'flex' : 'none';
-                    } else if (filter === 'favourites') {
-                        contact.style.display = contact.dataset.favorite === 'true' ? 'flex' : 'none';
-                    } else if (filter === 'groups') {
-                        contact.style.display = contact.dataset.isGroup === 'true' ? 'flex' : 'none';
-                    }
-                });
+        // Open emoji picker for profile inputs
+        function openProfileEmojiPicker(inputId, buttonElement) {
+            console.log('🎨 Emoji picker clicked for:', inputId);
+            const input = document.getElementById(inputId);
+            if (!input) {
+                console.error('❌ Input element not found:', inputId);
+                return;
             }
-
-            // Track currently editing field
-            let currentlyEditingField = null;
-
-            // Enable editing for profile fields
-            function enableEdit(inputId) {
-                // If another field is being edited, close it first
-                if (currentlyEditingField && currentlyEditingField !== inputId) {
-                    const previousInput = document.getElementById(currentlyEditingField);
-                    if (previousInput) {
-                        previousInput.setAttribute('readonly', 'true');
-                        const prevValueRow = previousInput.parentElement;
-                        const prevIcon = prevValueRow.querySelector('.edit-icon');
-                        if (prevIcon) {
-                            prevIcon.textContent = 'edit';
-                            prevIcon.onclick = () => enableEdit(currentlyEditingField);
-                        }
-                        // Remove emoji button from previous field
-                        const prevEmojiBtn = prevValueRow.querySelector('.profile-emoji-btn');
-                        if (prevEmojiBtn) prevEmojiBtn.remove();
-                    }
-                }
-
-                const input = document.getElementById(inputId);
-                if (input) {
-                    input.removeAttribute('readonly');
-                    input.focus(); // Auto-focus to input
-
-                    // Mark this field as currently editing
-                    currentlyEditingField = inputId;
-
-                    // Get the value-row container
-                    const valueRow = input.parentElement;
-
-                    // Change icon to checkmark while editing
-                    const icon = valueRow.querySelector('.edit-icon');
-                    if (icon) {
-                        icon.textContent = 'check';
-
-                        // Add emoji button
-                        const emojiBtn = document.createElement('i');
-                        emojiBtn.className = 'material-icons edit-icon profile-emoji-btn';
-                        emojiBtn.textContent = 'emoji_emotions';
-                        emojiBtn.style.marginRight = '8px';
-                        emojiBtn.style.cursor = 'pointer';
-                        emojiBtn.title = 'Add emoji';
-
-                        // Attach click handler
-                        emojiBtn.addEventListener('click', function (e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            e.stopImmediatePropagation();
-                            openProfileEmojiPicker(inputId, this);
-                        });
-
-                        valueRow.insertBefore(emojiBtn, icon);
-
-                        icon.onclick = () => {
-                            input.setAttribute('readonly', 'true');
-                            icon.textContent = 'edit';
-                            icon.onclick = () => enableEdit(inputId);
-
-                            // Remove emoji button
-                            const emojiButton = valueRow.querySelector('.profile-emoji-btn');
-                            if (emojiButton) emojiButton.remove();
-
-                            // Clear currently editing
-                            currentlyEditingField = null;
-
-                            saveProfile();
-                        };
-                    }
-                }
+            if (!window.emojiPicker) {
+                console.error('❌ Emoji picker not initialized');
+                return;
             }
+            console.log('✅ Opening emoji picker...');
 
-            // Open emoji picker for profile inputs
-            function openProfileEmojiPicker(inputId, buttonElement) {
-                console.log('🎨 Emoji picker clicked for:', inputId);
-                const input = document.getElementById(inputId);
-                if (!input) {
-                    console.error('❌ Input element not found:', inputId);
-                    return;
+            // Store current target input
+            window.currentProfileInput = input;
+
+            // Temporarily override insertEmoji to target profile input
+            const originalInsert = window.emojiPicker.insertEmoji.bind(window.emojiPicker);
+            window.emojiPicker.insertEmoji = function (emoji) {
+                if (window.currentProfileInput) {
+                    const start = window.currentProfileInput.selectionStart || 0;
+                    const end = window.currentProfileInput.selectionEnd || 0;
+                    const text = window.currentProfileInput.value;
+
+                    window.currentProfileInput.value = text.substring(0, start) + emoji + text.substring(end);
+
+                    const newPos = start + emoji.length;
+                    window.currentProfileInput.setSelectionRange(newPos, newPos);
+                    window.currentProfileInput.focus();
                 }
-                if (!window.emojiPicker) {
-                    console.error('❌ Emoji picker not initialized');
-                    return;
+            };
+
+            // Open picker near the button
+            window.emojiPicker.open(buttonElement);
+
+            // Restore original insertEmoji when picker closes
+            const originalClose = window.emojiPicker.close.bind(window.emojiPicker);
+            window.emojiPicker.close = function () {
+                window.emojiPicker.insertEmoji = originalInsert;
+                window.emojiPicker.close = originalClose;
+                window.currentProfileInput = null;
+                originalClose();
+            };
+        }
+
+        // Settings Modal
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').classList.remove('active');
+        }
+
+        window.openSettingsModal = async function () {
+            // Close other modals first
+            document.getElementById('profile-modal').classList.remove('active');
+            document.getElementById('users-modal').classList.remove('active');
+            document.getElementById('blocked-users-modal').classList.remove('active');
+            document.getElementById('calls-modal').classList.remove('active'); // Close Calls
+
+            document.getElementById('settings-modal').classList.add('active');
+
+            // Populate user details
+            const currentUser = window.fireflyChat?.currentUser;
+            if (currentUser) {
+                const settingsAvatar = document.getElementById('settings-user-avatar');
+                const settingsName = document.getElementById('settings-user-name');
+                const settingsAbout = document.getElementById('settings-user-about');
+
+                if (settingsAvatar) {
+                    settingsAvatar.src = currentUser.profilePicture || 'anony.jpg';
                 }
-                console.log('✅ Opening emoji picker...');
-
-                // Store current target input
-                window.currentProfileInput = input;
-
-                // Temporarily override insertEmoji to target profile input
-                const originalInsert = window.emojiPicker.insertEmoji.bind(window.emojiPicker);
-                window.emojiPicker.insertEmoji = function (emoji) {
-                    if (window.currentProfileInput) {
-                        const start = window.currentProfileInput.selectionStart || 0;
-                        const end = window.currentProfileInput.selectionEnd || 0;
-                        const text = window.currentProfileInput.value;
-
-                        window.currentProfileInput.value = text.substring(0, start) + emoji + text.substring(end);
-
-                        const newPos = start + emoji.length;
-                        window.currentProfileInput.setSelectionRange(newPos, newPos);
-                        window.currentProfileInput.focus();
-                    }
-                };
-
-                // Open picker near the button
-                window.emojiPicker.open(buttonElement);
-
-                // Restore original insertEmoji when picker closes
-                const originalClose = window.emojiPicker.close.bind(window.emojiPicker);
-                window.emojiPicker.close = function () {
-                    window.emojiPicker.insertEmoji = originalInsert;
-                    window.emojiPicker.close = originalClose;
-                    window.currentProfileInput = null;
-                    originalClose();
-                };
-            }
-
-            // Settings Modal
-            function closeSettingsModal() {
-                document.getElementById('settings-modal').classList.remove('active');
-            }
-
-            window.openSettingsModal = async function () {
-                // Close other modals first
-                document.getElementById('profile-modal').classList.remove('active');
-                document.getElementById('users-modal').classList.remove('active');
-                document.getElementById('blocked-users-modal').classList.remove('active');
-                document.getElementById('calls-modal').classList.remove('active'); // Close Calls
-
-                document.getElementById('settings-modal').classList.add('active');
-
-                // Populate user details
-                const currentUser = window.fireflyChat?.currentUser;
-                if (currentUser) {
-                    const settingsAvatar = document.getElementById('settings-user-avatar');
-                    const settingsName = document.getElementById('settings-user-name');
-                    const settingsAbout = document.getElementById('settings-user-about');
-
-                    if (settingsAvatar) {
-                        settingsAvatar.src = currentUser.profilePicture || 'anony.jpg';
-                    }
-                    if (settingsName) {
-                        settingsName.textContent = currentUser.name || currentUser.username || 'User';
-                    }
-                    if (settingsAbout) {
-                        // Try to get about from Firebase
-                        if (window.messageRouter?.database && currentUser.uid) {
-                            try {
-                                const userRef = window.messageRouter.database.ref(`users/${currentUser.uid}/about`);
-                                const snapshot = await userRef.once('value');
-                                const about = snapshot.val();
-                                settingsAbout.textContent = about || 'Hey there! I am using SynqX.';
-                            } catch (e) {
-                                settingsAbout.textContent = 'Hey there! I am using SynqX.';
-                            }
-                        } else {
+                if (settingsName) {
+                    settingsName.textContent = currentUser.name || currentUser.username || 'User';
+                }
+                if (settingsAbout) {
+                    // Try to get about from Firebase
+                    if (window.messageRouter?.database && currentUser.uid) {
+                        try {
+                            const userRef = window.messageRouter.database.ref(`users/${currentUser.uid}/about`);
+                            const snapshot = await userRef.once('value');
+                            const about = snapshot.val();
+                            settingsAbout.textContent = about || 'Hey there! I am using SynqX.';
+                        } catch (e) {
                             settingsAbout.textContent = 'Hey there! I am using SynqX.';
                         }
-                    }
-                }
-
-                // Load settings from Firebase
-                if (window.settingsManager) {
-                    await window.settingsManager.loadSettings();
-                }
-            }
-
-                ;
-
-            async function saveSettings() {
-                if (window.settingsManager) {
-                    const settings = window.settingsManager.getSettingsFromUI();
-                    const success = await window.settingsManager.saveSettings(settings);
-
-                    if (success && window.fireflyChat) {
-                        window.fireflyChat.showNotification('Settings saved!', 'success');
-                        closeSettingsModal();
-                    }
-
-                    else {
-                        window.fireflyChat?.showNotification('Failed to save settings', 'error');
+                    } else {
+                        settingsAbout.textContent = 'Hey there! I am using SynqX.';
                     }
                 }
             }
 
-            // Add event listeners to toggle switches for auto-save
-            function initializeSettingsToggles() {
-                const toggles = [
-                    'dark-mode-toggle',
-                    'sound-toggle',
-                    'desktop-notif-toggle',
-                    'chat-backup-toggle'
-                ];
+            // Load settings from Firebase
+            if (window.settingsManager) {
+                await window.settingsManager.loadSettings();
+            }
+        }
 
-                toggles.forEach(toggleId => {
-                    const toggle = document.getElementById(toggleId);
-                    if (toggle) {
-                        toggle.addEventListener('change', async function () {
-                            if (window.settingsManager) {
-                                const settings = window.settingsManager.getSettingsFromUI();
-                                const success = await window.settingsManager.saveSettings(settings);
+            ;
 
-                                if (success && window.fireflyChat) {
-                                    // Show subtle confirmation
-                                    window.fireflyChat.showNotification('Setting updated', 'success');
-                                }
+        async function saveSettings() {
+            if (window.settingsManager) {
+                const settings = window.settingsManager.getSettingsFromUI();
+                const success = await window.settingsManager.saveSettings(settings);
+
+                if (success && window.fireflyChat) {
+                    window.fireflyChat.showNotification('Settings saved!', 'success');
+                    closeSettingsModal();
+                }
+
+                else {
+                    window.fireflyChat?.showNotification('Failed to save settings', 'error');
+                }
+            }
+        }
+
+        // Add event listeners to toggle switches for auto-save
+        function initializeSettingsToggles() {
+            const toggles = [
+                'dark-mode-toggle',
+                'sound-toggle',
+                'desktop-notif-toggle',
+                'chat-backup-toggle'
+            ];
+
+            toggles.forEach(toggleId => {
+                const toggle = document.getElementById(toggleId);
+                if (toggle) {
+                    toggle.addEventListener('change', async function () {
+                        if (window.settingsManager) {
+                            const settings = window.settingsManager.getSettingsFromUI();
+                            const success = await window.settingsManager.saveSettings(settings);
+
+                            if (success && window.fireflyChat) {
+                                // Show subtle confirmation
+                                window.fireflyChat.showNotification('Setting updated', 'success');
                             }
-                        });
-                    }
-                });
+                        }
+                    });
+                }
+            });
 
-                console.log('✅ Settings toggles initialized');
-            }
+            console.log('✅ Settings toggles initialized');
+        }
 
-            // Initialize toggles when DOM is ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initializeSettingsToggles);
-            } else {
-                initializeSettingsToggles();
-            }
+        // Initialize toggles when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeSettingsToggles);
+        } else {
+            initializeSettingsToggles();
+        }
 
-            // Users Modal
-            function closeUsersModal() {
-                document.getElementById('users-modal').classList.remove('active');
-            }
+        // Users Modal
+        function closeUsersModal() {
+            document.getElementById('users-modal').classList.remove('active');
+        }
 
-            window.openUsersModal = async function () {
-                // Close other modals first
-                document.getElementById('profile-modal').classList.remove('active');
-                document.getElementById('settings-modal').classList.remove('active');
-                document.getElementById('blocked-users-modal').classList.remove('active');
-                document.getElementById('calls-modal').classList.remove('active'); // Close Calls
+        window.openUsersModal = async function () {
+            // Close other modals first
+            document.getElementById('profile-modal').classList.remove('active');
+            document.getElementById('settings-modal').classList.remove('active');
+            document.getElementById('blocked-users-modal').classList.remove('active');
+            document.getElementById('calls-modal').classList.remove('active'); // Close Calls
 
-                const modal = document.getElementById('users-modal');
-                modal.classList.add('active');
-                await loadAllUsers();
-            }
+            const modal = document.getElementById('users-modal');
+            modal.classList.add('active');
+            await loadAllUsers();
+        }
 
-                ;
+            ;
 
-            async function loadAllUsers() {
-                const usersList = document.getElementById('users-list');
-                usersList.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="loading-spinner" style="width: 40px; height: 40px; margin: 0 auto;"></div><p style="margin-top: 12px;">Loading users...</p></div>';
+        async function loadAllUsers() {
+            const usersList = document.getElementById('users-list');
+            usersList.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="loading-spinner" style="width: 40px; height: 40px; margin: 0 auto;"></div><p style="margin-top: 12px;">Loading users...</p></div>';
 
-                try {
-                    if (window.messageRouter && window.messageRouter.database) {
-                        const usersRef = window.messageRouter.database.ref('users');
-                        const snapshot = await usersRef.once('value');
+            try {
+                if (window.messageRouter && window.messageRouter.database) {
+                    const usersRef = window.messageRouter.database.ref('users');
+                    const snapshot = await usersRef.once('value');
 
-                        usersList.innerHTML = '';
+                    usersList.innerHTML = '';
 
-                        const currentUid = window.fireflyChat?.currentUser?.uid || localStorage.getItem('userId');
+                    const currentUid = window.fireflyChat?.currentUser?.uid || localStorage.getItem('userId');
 
-                        snapshot.forEach((child) => {
-                            const user = child.val();
-                            user.uid = child.key; // Ensure UID is set for consistent contact matching
+                    snapshot.forEach((child) => {
+                        const user = child.val();
+                        user.uid = child.key; // Ensure UID is set for consistent contact matching
 
-                            // Skip self
-                            if (child.key === currentUid || user.uid === currentUid) return;
+                        // Skip self
+                        if (child.key === currentUid || user.uid === currentUid) return;
 
-                            const userDiv = document.createElement('div');
-                            userDiv.className = 'user-list-item';
+                        const userDiv = document.createElement('div');
+                        userDiv.className = 'user-list-item';
 
-                            userDiv.innerHTML = `
+                        userDiv.innerHTML = `
                                     <div class="user-list-avatar"><img src="${user.profilePicture || 'anony.jpg'}" alt="${user.name}"></div>
                                     <div style="flex: 1;">
                                         <div style="font-weight: 600;">${user.name || user.username}</div>
@@ -1688,160 +1691,160 @@
                                     </div>
                                 `;
 
-                            userDiv.onclick = () => {
-                                if (window.fireflyChat) {
-                                    // Auto-paste username
-                                    const input = document.getElementById('username-input');
-                                    if (input) input.value = user.username || user.name;
+                        userDiv.onclick = () => {
+                            if (window.fireflyChat) {
+                                // Auto-paste username
+                                const input = document.getElementById('username-input');
+                                if (input) input.value = user.username || user.name;
 
-                                    // Connect
-                                    window.fireflyChat.addToContacts(user);
-                                    window.fireflyChat.openChatWithPeer(user);
-                                    closeUsersModal();
-                                }
+                                // Connect
+                                window.fireflyChat.addToContacts(user);
+                                window.fireflyChat.openChatWithPeer(user);
+                                closeUsersModal();
                             }
+                        }
 
-                                ;
-                            usersList.appendChild(userDiv);
-                        });
-                    }
-
-                    else {
-                        usersList.innerHTML = '<p style="text-align: center; opacity: 0.7;">Firebase not available</p>';
-                    }
+                            ;
+                        usersList.appendChild(userDiv);
+                    });
                 }
 
-                catch (error) {
-                    console.error('Error loading users:', error);
-                    usersList.innerHTML = '<p style="text-align: center; opacity: 0.7;">Error loading users</p>';
+                else {
+                    usersList.innerHTML = '<p style="text-align: center; opacity: 0.7;">Firebase not available</p>';
                 }
             }
 
-            // Blocked Users Modal (Sidebar Panel)
-            function closeBlockedModal() {
-                document.getElementById('blocked-users-modal').classList.remove('active');
+            catch (error) {
+                console.error('Error loading users:', error);
+                usersList.innerHTML = '<p style="text-align: center; opacity: 0.7;">Error loading users</p>';
             }
+        }
 
-            window.openBlockedModal = function () {
-                // Close other modals first
-                document.getElementById('profile-modal').classList.remove('active');
-                document.getElementById('settings-modal').classList.remove('active');
-                document.getElementById('users-modal').classList.remove('active');
-                document.getElementById('calls-modal').classList.remove('active'); // Close Calls
+        // Blocked Users Modal (Sidebar Panel)
+        function closeBlockedModal() {
+            document.getElementById('blocked-users-modal').classList.remove('active');
+        }
 
-                document.getElementById('blocked-users-modal').classList.add('active');
-                if (window.fireflyChat) window.fireflyChat.loadBlockedUsers();
+        window.openBlockedModal = function () {
+            // Close other modals first
+            document.getElementById('profile-modal').classList.remove('active');
+            document.getElementById('settings-modal').classList.remove('active');
+            document.getElementById('users-modal').classList.remove('active');
+            document.getElementById('calls-modal').classList.remove('active'); // Close Calls
+
+            document.getElementById('blocked-users-modal').classList.add('active');
+            if (window.fireflyChat) window.fireflyChat.loadBlockedUsers();
+        }
+
+        // Main Menu Toggle
+        window.toggleMainMenu = function () {
+            const menu = document.getElementById('main-menu-dropdown');
+            if (menu.style.display === 'none') {
+                menu.style.display = 'block';
+                // Close on click outside
+                setTimeout(() => {
+                    document.addEventListener('click', closeMainMenu);
+                }, 10);
+            } else {
+                menu.style.display = 'none';
             }
-
-            // Main Menu Toggle
-            window.toggleMainMenu = function () {
-                const menu = document.getElementById('main-menu-dropdown');
-                if (menu.style.display === 'none') {
-                    menu.style.display = 'block';
-                    // Close on click outside
-                    setTimeout(() => {
-                        document.addEventListener('click', closeMainMenu);
-                    }, 10);
-                } else {
-                    menu.style.display = 'none';
-                }
+        }
+        function closeMainMenu(e) {
+            const menu = document.getElementById('main-menu-dropdown');
+            if (!menu.contains(e.target)) {
+                menu.style.display = 'none';
+                document.removeEventListener('click', closeMainMenu);
             }
-            function closeMainMenu(e) {
-                const menu = document.getElementById('main-menu-dropdown');
-                if (!menu.contains(e.target)) {
-                    menu.style.display = 'none';
-                    document.removeEventListener('click', closeMainMenu);
-                }
+        }
+
+        // Confirm Block Modal
+        let pendingBlockUid = null;
+
+        window.openConfirmBlockModal = function (uid) {
+            pendingBlockUid = uid;
+            document.getElementById('confirm-block-modal').style.display = 'flex';
+        }
+
+            ;
+
+        function closeConfirmBlockModal() {
+            pendingBlockUid = null;
+            document.getElementById('confirm-block-modal').style.display = 'none';
+        }
+
+        async function confirmBlockUser() {
+            if (pendingBlockUid && window.fireflyChat) {
+                await window.fireflyChat.blockUser(pendingBlockUid);
+                closeConfirmBlockModal();
+                closeUsersModal(); // Close other modals if open
+
+                // If we were on the info panel or chat, those will be handled by blockUser logic
             }
+        }
 
-            // Confirm Block Modal
-            let pendingBlockUid = null;
+        // Native Emoji Picker Trigger
+        function triggerNativeEmoji() {
+            const messageInput = document.getElementById('message-input');
 
-            window.openConfirmBlockModal = function (uid) {
-                pendingBlockUid = uid;
-                document.getElementById('confirm-block-modal').style.display = 'flex';
-            }
+            if (messageInput) {
+                messageInput.focus();
 
-                ;
+                // Detect OS and show appropriate shortcut
+                const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+                const shortcut = isMac ? 'Cmd+Ctrl+Space' : 'Win+.';
 
-            function closeConfirmBlockModal() {
-                pendingBlockUid = null;
-                document.getElementById('confirm-block-modal').style.display = 'none';
-            }
-
-            async function confirmBlockUser() {
-                if (pendingBlockUid && window.fireflyChat) {
-                    await window.fireflyChat.blockUser(pendingBlockUid);
-                    closeConfirmBlockModal();
-                    closeUsersModal(); // Close other modals if open
-
-                    // If we were on the info panel or chat, those will be handled by blockUser logic
-                }
-            }
-
-            // Native Emoji Picker Trigger
-            function triggerNativeEmoji() {
-                const messageInput = document.getElementById('message-input');
-
-                if (messageInput) {
-                    messageInput.focus();
-
-                    // Detect OS and show appropriate shortcut
-                    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-                    const shortcut = isMac ? 'Cmd+Ctrl+Space' : 'Win+.';
-
-                    // Show brief notification
-                    if (window.fireflyChat) {
-                        window.fireflyChat.showNotification(`Press $ {
+                // Show brief notification
+                if (window.fireflyChat) {
+                    window.fireflyChat.showNotification(`Press $ {
                                     shortcut
                                 }
 
                                 for emojis`, 'info');
-                    }
                 }
             }
+        }
 
-            // Call History Panel Functions (Sidebar Panel Logic)
-            window.openCallsModal = function () {
-                // Close other sidebar panels explicitly
-                const panels = ['users-modal', 'settings-modal', 'profile-modal', 'blocked-users-modal'];
-                panels.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) el.classList.remove('active');
-                });
+        // Call History Panel Functions (Sidebar Panel Logic)
+        window.openCallsModal = function () {
+            // Close other sidebar panels explicitly
+            const panels = ['users-modal', 'settings-modal', 'profile-modal', 'blocked-users-modal'];
+            panels.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('active');
+            });
 
-                // Close Info Panel (Right side) if open, to avoid confusion
-                const infoPanel = document.querySelector('.chat-info');
-                if (infoPanel) infoPanel.classList.remove('active');
+            // Close Info Panel (Right side) if open, to avoid confusion
+            const infoPanel = document.querySelector('.chat-info');
+            if (infoPanel) infoPanel.classList.remove('active');
 
-                const panel = document.getElementById('calls-modal');
-                if (panel) {
-                    panel.classList.add('active'); // Activate Sidebar Panel
-                    if (window.audioCallManager) {
-                        window.audioCallManager.loadCallHistory();
-                    }
+            const panel = document.getElementById('calls-modal');
+            if (panel) {
+                panel.classList.add('active'); // Activate Sidebar Panel
+                if (window.audioCallManager) {
+                    window.audioCallManager.loadCallHistory();
                 }
             }
+        }
 
-            window.closeCallsModal = function () {
-                const panel = document.getElementById('calls-modal');
-                if (panel) panel.classList.remove('active');
-            }
-            window.onclick = function (event) {
-                const modals = ['users-modal', 'settings-modal', 'profile-modal', 'calls-modal'];
-                modals.forEach(id => {
-                    const modal = document.getElementById(id);
-                    if (event.target == modal) {
-                        modal.style.display = "none";
-                    }
-                });
-            }
+        window.closeCallsModal = function () {
+            const panel = document.getElementById('calls-modal');
+            if (panel) panel.classList.remove('active');
+        }
+        window.onclick = function (event) {
+            const modals = ['users-modal', 'settings-modal', 'profile-modal', 'calls-modal'];
+            modals.forEach(id => {
+                const modal = document.getElementById(id);
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            });
+        }
 
-        </script>
+    </script>
 
-        <!-- Old Calls Modal Removed -->
-        <script src="emoji-picker.js"></script>
-        <script src="audio-call.js"></script>
+    <!-- Old Calls Modal Removed -->
+    <script src="emoji-picker.js"></script>
+    <script src="audio-call.js"></script>
 </body>
 
 </html>

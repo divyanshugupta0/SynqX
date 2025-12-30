@@ -1869,8 +1869,20 @@ function logout() {
 
 function toggleInfoPanel() {
     const panel = document.getElementById('info-panel');
-    if (panel) {
-        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    const chatApp = document.querySelector('.chat-app');
+    if (panel && chatApp) {
+        const isOpen = chatApp.classList.contains('info-panel-open');
+        if (isOpen) {
+            chatApp.classList.remove('info-panel-open');
+            setTimeout(() => {
+                panel.style.display = 'none';
+            }, 300); // Wait for transition if any
+        } else {
+            panel.style.display = 'flex';
+            // Force reflow
+            panel.offsetHeight;
+            chatApp.classList.add('info-panel-open');
+        }
     }
 }
 
