@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#667eea">
-    <title>Modern Login & Signup</title>
+    <title>SynqX-Messenger</title>
     <script>
         // Immediate Auth Check - BEFORE any rendering
         (function () {
@@ -1069,7 +1069,7 @@
         <div class="site-branding">
             <div class="logo-container">
                 <div class="logo">
-                    <span class="fire">Fire</span><span class="fly">Fly</span><span class="nox">-NOX</span>
+                    <span class="fire">S</span><span class="fly">ynqX</span><span class="nox">-Messenger</span>
                 </div>
             </div>
             <div class="tagline">Illuminate Your Digital Journey</div>
@@ -1138,13 +1138,13 @@
         </div>
         <div class="panels-container">
             <div class="panel left-panel">
-                <h2>New to FireFly-NOX?</h2>
+                <h2>New to SynqX?</h2>
                 <p>Join our community and discover a world of possibilities. Sign up today to unlock all features!</p>
                 <button class="btn" id="signup-panel-btn">Get Started</button>
             </div>
             <div class="panel right-panel">
                 <h2>Welcome Back!</h2>
-                <p>We're excited to see you again. Sign in to continue your journey with FireFly-NOX.</p>
+                <p>We're excited to see you again. Sign in to continue your journey with SynqX.</p>
                 <button class="btn" id="signin-panel-btn">Sign In</button>
             </div>
         </div>
@@ -1303,22 +1303,7 @@
         document.addEventListener('DOMContentLoaded', function () {
             console.log("DOM loaded, setting up authentication system");
 
-            // Check for remembered user first
-            const rememberedUser = checkForRememberedUser();
-            if (rememberedUser) {
-                console.log("Found remembered user:", rememberedUser.username || rememberedUser.email);
-                // Store in session storage for current session
-                sessionStorage.setItem('currentUser', JSON.stringify(rememberedUser));
-
-                // Show a quick message and redirect
-                const loginSuccess = document.getElementById('login-success');
-                loginSuccess.textContent = `Welcome back, ${rememberedUser.name || rememberedUser.username}! Redirecting...`;
-
-                setTimeout(() => {
-                    // Redirect to dashboard
-                    redirectToDashboard(rememberedUser.uid);
-                }, 2000);
-            }
+            // NOTE: Auth check removed - the immediate check at page start (lines 14-24) handles this once
 
             // DOM elements and UI setup
             const container = document.querySelector('.container');
@@ -2396,7 +2381,7 @@
                     const htmlBody = `
                         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
                             <div style="text-align: center; margin-bottom: 20px;">
-                                <h1 style="color: #667eea; margin-bottom: 5px;">FireFly-NOX</h1>
+                                <h1 style="color: #667eea; margin-bottom: 5px;">SynqX</h1>
                                 <p style="color: #666; font-style: italic;">Illuminate Your Digital Journey</p>
                             </div>
                             <div style="padding: 20px; background-color: #f9f9f9; border-radius: 5px;">
@@ -2409,7 +2394,7 @@
                                 <p style="color: #666;">If you didn't request this code, please ignore this email.</p>
                             </div>
                             <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0; color: #999; font-size: 12px; text-align: center;">
-                                <p>&copy; ${new Date().getFullYear()} FireFly-NOX. All rights reserved.</p>
+                                <p>&copy; ${new Date().getFullYear()} SynqX. All rights reserved.</p>
                             </div>
                         </div>
                     `;
@@ -2422,7 +2407,7 @@
                         Password: "4QdgMqEvaX3P7Fyb",
                         Port: 587,
                         To: email,
-                        From: "no-reply@firefly-nox.com",
+                        From: "no-reply@synqx.com",
                         Subject: subject,
                         Body: htmlBody,
                         SecureToken: "your-secure-token" // Optional if needed
@@ -2437,8 +2422,8 @@
                         },
                         body: JSON.stringify({
                             sender: {
-                                name: "FireFly-NOX",
-                                email: "no-reply@firefly-nox.com"
+                                name: "SynqX",
+                                email: "no-reply@synqx.com"
                             },
                             to: [{
                                 email: email
@@ -2468,7 +2453,7 @@
                             const nameField = document.createElement('input');
                             nameField.type = 'text';
                             nameField.name = 'name';
-                            nameField.value = 'FireFly-NOX User';
+                            nameField.value = 'SynqX User';
 
                             const emailField = document.createElement('input');
                             emailField.type = 'email';
@@ -2727,7 +2712,7 @@
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-logo">
-                <span class="fire">Fire</span><span class="fly">Fly</span><span class="nox">-NOX</span>
+                <span class="fire">S</span><span class="fly">ynq</span><span class="nox">X</span>
             </div>
             <div class="footer-links">
                 <h6>Developed by :<a href="#"> Divyanshu Gupta</a></h6>
@@ -2739,7 +2724,7 @@
                 <a href="#" class="social-icon"><i class="fab fa-linkedin-in"></i></a>
             </div>
             <div class="footer-copyright">
-                FireFly-NOX | &copy; All Rights Reserved 2025.
+                SynqX | &copy; All Rights Reserved 2026.
             </div>
         </div>
     </footer>
