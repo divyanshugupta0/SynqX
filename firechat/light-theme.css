@@ -273,13 +273,13 @@ body.light-theme .loader-footer {
 
 /* Contact Menu Button */
 body.light-theme .contact-menu-btn {
-    background: var(--bg-sidebar);
-    box-shadow: -10px 0 10px var(--bg-sidebar);
+    background: transparent;
+    box-shadow: none;
     color: var(--text-secondary);
 }
 
 body.light-theme .contact-menu-btn:hover {
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.05);
     color: var(--text-primary);
 }
 

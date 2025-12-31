@@ -37,6 +37,9 @@ class FireflyChat {
         // Load saved contacts
         this.loadContacts();
 
+        // Load favourites from Firebase
+        this.loadFavourites();
+
         console.log('✅ FireFly Chat initialized successfully');
 
         // Hide App Loader
@@ -374,13 +377,13 @@ class FireflyChat {
             const blockedRef = window.messageRouter.database.ref(`users/${this.currentUser.uid}/blocked`);
             const snapshot = await blockedRef.once('value');
             const blockedIds = snapshot.val();
-            this.blockedUsersSet = new Set(Object.keys(blockedIds || {}));
-            console.log('🚫 Loaded blocked users:', this.blockedUsersSet.size);
+            this.blockedUsers = new Set(Object.keys(blockedIds || {}));
+            console.log('🚫 Loaded blocked users:', this.blockedUsers.size);
 
             // Listen for changes to blocked list
             blockedRef.on('value', (snap) => {
                 const updated = snap.val();
-                this.blockedUsersSet = new Set(Object.keys(updated || {}));
+                this.blockedUsers = new Set(Object.keys(updated || {}));
             });
         } catch (e) { console.error('Error loading blocked list', e); }
 
@@ -391,7 +394,7 @@ class FireflyChat {
             const senderId = snapshot.key;
 
             // CHECK: Is this a blocked user?
-            if (this.blockedUsersSet && this.blockedUsersSet.has(senderId)) {
+            if (this.blockedUsers && this.blockedUsers.has(senderId)) {
                 let senderName = 'Blocked User';
                 try {
                     const userSnap = await window.messageRouter.database.ref(`users/${senderId}`).once('value');
@@ -399,9 +402,9 @@ class FireflyChat {
                     if (user) senderName = user.name || user.username || 'Blocked User';
                 } catch (e) { }
 
-                this.showNotification(`Blocked user ${senderName} tried to connect`, 'warning');
-                snapshot.ref.remove();
-                console.log(`🚫 Blocked connection attempt from ${senderId}`);
+                // Do not delete chat history. Just verify blocked state is respected in UI.
+                // snapshot.ref.remove(); // NO DELETION
+                console.log(`🚫 Blocked connection attempt from ${senderId} (History preserved)`);
             }
             // CHECK: Is this a NEW contact?
             else if (!this.contacts.has(senderId) && senderId !== this.currentUser.uid) {
@@ -624,7 +627,18 @@ class FireflyChat {
                 }
             });
         }
-        /* ------------------------- */
+
+        // Update header and info
+        this.updateCurrentPeerUI(peer);
+
+        // Ensure we are in each other's contacts
+        this.ensureMutualContact(peer);
+
+        // Check if user is blocked and update UI
+        const isBlocked = this.blockedUsers && this.blockedUsers.has(peer.uid);
+        this.updateChatInputForBlockedState(isBlocked);
+
+        /* --- Media Viewing Logic --- */
 
         // Clear and show messages area
         this.clearMessagesArea();
@@ -642,6 +656,12 @@ class FireflyChat {
         // Listen for new messages from this peer
         if (window.messageRouter) {
             window.messageRouter.listenForMessages(peer.uid, (message) => {
+                // Check if blocked
+                if (this.blockedUsers && this.blockedUsers.has(message.sender)) {
+                    console.log('🔇 Ignored message from blocked user:', message.sender);
+                    return;
+                }
+
                 // Double-check the message is from the current peer
                 if (this.currentPeer && message.sender !== this.currentUser.uid) {
                     this.displayMessage(message, 'received');
@@ -655,9 +675,82 @@ class FireflyChat {
         console.log('✅ Chat opened with:', peer.name || peer.username);
     }
 
+    // Update Chat Input UI based on blocked state
+    updateChatInputForBlockedState(isBlocked) {
+        const inputArea = document.getElementById('chat-input-area');
+        const existingNotification = document.getElementById('blocked-notification');
+
+        if (!inputArea) return;
+
+        if (isBlocked) {
+            inputArea.style.display = 'none';
+
+            if (!existingNotification) {
+                const notif = document.createElement('div');
+                notif.id = 'blocked-notification';
+                notif.className = 'blocked-notification';
+                notif.style.cssText = `
+                    padding: 15px;
+                    text-align: center;
+                    background: var(--bg-secondary);
+                    color: var(--text-secondary);
+                    font-size: 14px;
+                    cursor: pointer;
+                    border-top: 1px solid var(--border-color);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                `;
+                notif.innerHTML = '<span>You blocked this contact. Tap to unblock.</span>';
+
+                notif.onclick = () => {
+                    this.toggleBlockUser(this.currentPeer?.uid);
+                };
+
+                // Insert after messages area (before input area which is now hidden)
+                const main = document.querySelector('.chat-main');
+                if (main) main.insertBefore(notif, inputArea);
+            } else {
+                existingNotification.style.display = 'flex';
+            }
+        } else {
+            inputArea.style.display = 'flex';
+            if (existingNotification) {
+                existingNotification.style.display = 'none';
+                existingNotification.remove();
+            }
+        }
+
+        // Also update Info Panel button if it exists
+        const blockBtn = document.getElementById('info-block-btn');
+        const blockIcon = document.getElementById('info-block-icon');
+        const blockText = document.getElementById('info-block-text');
+
+        if (blockBtn) {
+            if (isBlocked) {
+                blockIcon.textContent = 'check_circle';
+                blockIcon.style.color = '#10b981';
+                blockText.textContent = 'Unblock User';
+                blockBtn.classList.remove('danger');
+            } else {
+                blockIcon.textContent = 'block';
+                blockIcon.style.color = '';
+                blockText.textContent = 'Block User';
+                blockBtn.classList.add('danger');
+            }
+        }
+    }
+
     async sendMessage() {
         if (!this.currentPeer) {
             this.showNotification('No active chat', 'error');
+            return;
+        }
+
+        // Check if blocked
+        if (this.blockedUsers && this.blockedUsers.has(this.currentPeer.uid)) {
+            this.showNotification('Unblock user to send message', 'error');
             return;
         }
 
@@ -1238,6 +1331,46 @@ class FireflyChat {
         // Set up profile listener for this new contact
         this.setupProfileListenerForContact(user.uid);
         if (this.setupUnreadListener) this.setupUnreadListener(user.uid);
+
+        // Ensure mutual
+        this.ensureMutualContact(user);
+    }
+
+    async ensureMutualContact(peer) {
+        if (!peer || !peer.uid || !this.currentUser) return;
+
+        // 1. Ensure peer is in MY contacts (Local & Remote)
+        // Note: addToContacts handles the local/remote save for MY side if called via addToContacts.
+        // But if called from openChatWithPeer, we might need to add to my side too.
+        if (!this.contacts.has(peer.uid)) {
+            // This will recursively call ensureMutualContact but that's fine as now has(uid) is true?
+            // Wait, addToContacts calls ensureMutualContact.
+            // So if I call addToContacts here -> loop?
+            // has(uid) is set synchronously in addToContacts first line. So loop breaks.
+            this.addToContacts(peer); // Use this to add to MY side properly
+            return; // addToContacts will call us back after setting local state
+        }
+
+        // 2. Ensure I am in PEER's contacts (Firebase only)
+        if (window.messageRouter?.database) {
+            try {
+                const peerContactsRef = window.messageRouter.database.ref(`contacts/${peer.uid}/${this.currentUser.uid}`);
+                const snapshot = await peerContactsRef.once('value');
+
+                if (!snapshot.exists()) {
+                    const myProfile = {
+                        uid: this.currentUser.uid,
+                        name: this.currentUser.name || this.currentUser.username || 'User',
+                        username: this.currentUser.username,
+                        profilePicture: this.currentUser.profilePicture
+                    };
+                    await peerContactsRef.set(myProfile);
+                    console.log(`🤝 Auto-added myself to ${peer.name}'s contacts (Mutual)`);
+                }
+            } catch (err) {
+                console.error('Error ensuring mutual contact:', err);
+            }
+        }
     }
 
     // Set up listener for a single contact
@@ -1289,27 +1422,58 @@ class FireflyChat {
             const unread = this.unreadCounts ? (this.unreadCounts.get(uid) || 0) : 0;
             const badgeHTML = unread > 0 ? `<div class="unread-badge">${unread}</div>` : '';
 
+            // Check if favourite
+            const isFav = this.favourites && this.favourites.has(uid);
+            const favStarHTML = isFav ? '<i class="material-icons favourite-star" style="font-size: 14px; color: #fbbf24; margin-left: 4px;">star</i>' : '';
+
+            // Set data attribute for filtering
+            contactDiv.dataset.favorite = isFav ? 'true' : 'false';
+
             contactDiv.innerHTML = `
                 <div class="contact-avatar">
                     <img src="${contact.profilePicture || 'anony.jpg'}" alt="${contact.name}">
                 </div>
                 <div class="contact-info">
-                    <div class="contact-name">${contact.name || contact.username}</div>
+                    <div class="contact-name">${contact.name || contact.username}${favStarHTML}</div>
                     <div class="contact-status">Click to chat</div>
                 </div>
                 ${badgeHTML}
-                <div class="contact-menu-btn" onclick="event.stopPropagation(); window.fireflyChat.showContextMenu(event, '${uid}')">
-                    <i class="material-icons" style="font-size: 16px;">more_vert</i>
+                <div class="contact-menu-btn" data-menu-btn="true">
+                    <i class="material-icons" style="font-size: 20px;">more_vert</i>
                 </div>
             `;
 
-            contactDiv.addEventListener('click', () => {
+            // Get the menu button after innerHTML is set
+            const menuBtn = contactDiv.querySelector('.contact-menu-btn');
+            if (menuBtn) {
+                menuBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    this.showContextMenu(e, uid);
+                });
+
+                // Also handle touch events for mobile
+                menuBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    this.showContextMenu(e, uid);
+                }, { passive: false });
+            }
+
+            contactDiv.addEventListener('click', (e) => {
+                // Don't open chat if clicking on menu button
+                if (e.target.closest('.contact-menu-btn')) {
+                    return;
+                }
                 this.openChatWithPeer(contact);
             });
 
             contactsList.appendChild(contactDiv);
         });
     }
+
 
     setupUnreadListener(uid) {
         if (!window.messageRouter?.database) return;
@@ -1351,52 +1515,167 @@ class FireflyChat {
 
         const menu = document.getElementById('contact-context-menu');
         if (menu) {
-            menu.style.display = 'block';
-            menu.style.top = `${event.clientY}px`;
-            menu.style.left = `${event.clientX - 160}px`; // Show to the left of the cursor/button
+            // Check if mobile
+            const isMobile = window.innerWidth <= 768;
 
-            // Close menu when clicking elsewhere
-            const closeMenu = () => {
-                menu.style.display = 'none';
-                document.removeEventListener('click', closeMenu);
-            };
+            // Update favourite menu item based on current state
+            const favouriteText = document.getElementById('favourite-menu-text');
+            const favouriteItem = document.getElementById('favourite-menu-item');
+            const isFavourite = this.favourites && this.favourites.has(uid);
 
-            setTimeout(() => {
-                document.addEventListener('click', closeMenu);
-            }, 10);
+            if (favouriteText) {
+                favouriteText.textContent = isFavourite ? 'Remove from Favourites' : 'Add to Favourites';
+            }
+            if (favouriteItem) {
+                const icon = favouriteItem.querySelector('i');
+                if (icon) {
+                    icon.textContent = isFavourite ? 'star' : 'star_border';
+                    icon.style.color = isFavourite ? '#fbbf24' : '';
+                }
+            }
+
+            // Update block menu item based on current state
+            const blockText = document.getElementById('block-menu-text');
+            const blockIcon = document.getElementById('block-menu-icon');
+            const blockItem = document.getElementById('block-menu-item');
+            const isBlocked = this.blockedUsers && this.blockedUsers.has(uid);
+
+            if (blockText) {
+                blockText.textContent = isBlocked ? 'Unblock User' : 'Block User';
+            }
+            if (blockIcon) {
+                blockIcon.textContent = isBlocked ? 'check_circle' : 'block';
+                blockIcon.style.color = isBlocked ? '#10b981' : '';
+            }
+            if (blockItem) {
+                blockItem.classList.toggle('danger', !isBlocked);
+            }
+
+            if (isMobile) {
+                // On mobile: show as bottom sheet with overlay
+
+                // Create/get overlay to capture outside clicks
+                let overlay = document.getElementById('context-menu-overlay');
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.id = 'context-menu-overlay';
+                    document.body.appendChild(overlay);
+                }
+
+                // Apply styles (ensures consistent state even if element exists)
+                overlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.5);
+                    z-index: 10000;
+                `;
+
+
+                // Show overlay
+                overlay.style.display = 'block';
+
+                // Close menu when clicking overlay (outside menu)
+                overlay.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    menu.style.display = 'none';
+                    overlay.style.display = 'none';
+                };
+
+                // Show menu
+                menu.style.display = 'block';
+                menu.style.top = 'auto';
+                menu.style.left = '0';
+                menu.style.right = '0';
+                menu.style.bottom = '0';
+            } else {
+                // On desktop: position near cursor
+                menu.style.display = 'block';
+                menu.style.top = `${event.clientY}px`;
+                menu.style.left = `${event.clientX - 160}px`;
+                menu.style.bottom = 'auto';
+                menu.style.right = 'auto';
+
+                // Close menu when clicking elsewhere (desktop)
+                const closeMenu = (e) => {
+                    menu.style.display = 'none';
+                    document.removeEventListener('click', closeMenu);
+                };
+
+                setTimeout(() => {
+                    document.addEventListener('click', closeMenu);
+                }, 10);
+            }
         }
     }
+
 
     async handleContextMenuAction(action) {
         const uid = this.contextMenuTargetUid;
         if (!uid) return;
 
+        // Close the context menu and overlay immediately
+        const menu = document.getElementById('contact-context-menu');
+        const overlay = document.getElementById('context-menu-overlay');
+        if (menu) menu.style.display = 'none';
+        if (overlay) overlay.style.display = 'none';
+
         switch (action) {
             case 'profile':
-                // Show user profile (you might want to implement a read-only profile modal)
                 console.log('View profile for:', uid);
-                // For now just open chat which shows info
                 const contact = this.contacts.get(uid);
-                if (contact) this.openChatWithPeer(contact);
+                if (contact) {
+                    const isMobile = window.innerWidth <= 768;
+
+                    // Update info panel with this contact's data
+                    this.populateInfoPanel(contact);
+
+                    if (isMobile) {
+                        // Mobile: Directly open info-panel without opening chat
+                        const panel = document.getElementById('info-panel');
+                        if (panel) {
+                            panel.style.display = 'flex';
+                        }
+                    } else {
+                        // Desktop: Open chat first, then auto-open info-panel
+                        this.openChatWithPeer(contact);
+                        // Small delay to let chat open, then open info panel
+                        setTimeout(() => {
+                            if (window.toggleInfoPanel) {
+                                window.toggleInfoPanel();
+                            }
+                        }, 100);
+                    }
+                }
                 break;
 
-            case 'disconnect':
-                if (confirm('Disconnect from this user?')) {
-                    await this.disconnectUser(uid);
-                }
+            case 'favourite':
+                await this.toggleFavourite(uid);
                 break;
 
             case 'delete':
-                if (confirm('Remove this chat from your list?')) {
-                    await this.disconnectUser(uid);
-                }
+                window.showCustomConfirm({
+                    icon: 'delete_forever',
+                    iconColor: '#ef4444',
+                    title: 'Delete Chat?',
+                    message: 'This will permanently delete the chat and all messages. This action cannot be undone.',
+                    confirmText: 'Delete',
+                    confirmColor: '#ef4444',
+                    onConfirm: () => this.deleteChat(uid)
+                });
                 break;
 
             case 'block':
-                window.openConfirmBlockModal(uid);
+                this.toggleBlockUser(uid);
                 break;
         }
     }
+
+
 
     saveContacts() {
         const contactsData = Array.from(this.contacts.entries());
@@ -1475,6 +1754,26 @@ class FireflyChat {
         if (peerName) peerName.textContent = peer.name || peer.username;
         if (peerUsername) peerUsername.textContent = '@' + (peer.username || peer.name);
 
+        // Update Block Button text in Info Panel
+        const blockBtn = document.getElementById('info-block-btn');
+        const blockIcon = document.getElementById('info-block-icon');
+        const blockText = document.getElementById('info-block-text');
+        const isBlocked = this.blockedUsers && this.blockedUsers.has(peer.uid);
+
+        if (blockBtn) {
+            if (isBlocked) {
+                blockIcon.textContent = 'check_circle';
+                blockIcon.style.color = '#10b981';
+                blockText.textContent = 'Unblock User';
+                blockBtn.classList.remove('danger');
+            } else {
+                blockIcon.textContent = 'block';
+                blockIcon.style.color = '';
+                blockText.textContent = 'Block User';
+                blockBtn.classList.add('danger');
+            }
+        }
+
         // Update header
         const status = document.getElementById('connection-status');
         if (status) {
@@ -1485,6 +1784,96 @@ class FireflyChat {
         }
 
         console.log(`🔄 Updated UI for current peer: ${peer.name}`);
+    }
+
+    // Populate info panel with a contact's data (used for View Profile action)
+    populateInfoPanel(contact) {
+        // 1. Basic Profile Info
+        const infoAvatar = document.getElementById('peer-avatar');
+        if (infoAvatar) infoAvatar.src = contact.profilePicture || 'anony.jpg';
+
+        const infoName = document.getElementById('peer-name');
+        if (infoName) infoName.textContent = contact.name || contact.username;
+
+        const infoUsername = document.getElementById('peer-username-display');
+        if (infoUsername) infoUsername.textContent = '@' + (contact.username || contact.name);
+
+        // Update Block Button
+        const blockBtn = document.getElementById('info-block-btn');
+        const blockIcon = document.getElementById('info-block-icon');
+        const blockText = document.getElementById('info-block-text');
+        const isBlocked = this.blockedUsers && this.blockedUsers.has(contact.uid);
+
+        if (blockBtn) {
+            if (isBlocked) {
+                blockIcon.textContent = 'check_circle';
+                blockIcon.style.color = '#10b981';
+                blockText.textContent = 'Unblock User';
+                blockBtn.classList.remove('danger');
+            } else {
+                blockIcon.textContent = 'block';
+                blockIcon.style.color = '';
+                blockText.textContent = 'Block User';
+                blockBtn.classList.add('danger');
+            }
+        }
+
+        // 2. Fetch About Info
+        const infoAbout = document.getElementById('peer-about');
+        if (infoAbout) {
+            infoAbout.textContent = contact.about || 'Hey there! I am using SynqX.';
+
+            if (window.messageRouter && window.messageRouter.database) {
+                window.messageRouter.database.ref('users/' + contact.uid + '/about').once('value').then(snap => {
+                    const fetchedAbout = snap.val();
+                    infoAbout.textContent = fetchedAbout || 'Hey there! I am using SynqX.';
+                }).catch((e) => {
+                    console.warn('Failed to fetch about:', e);
+                });
+            }
+        }
+
+        // 3. Populate Media Grid
+        const mediaGrid = document.getElementById('media-grid');
+        const mediaCountDisplay = document.getElementById('media-count');
+
+        if (window.messageRouter && (mediaGrid || mediaCountDisplay)) {
+            window.messageRouter.getMessageHistory(contact.uid, 100).then(messages => {
+                const mediaMessages = messages.filter(m => m.type === 'image' || m.type === 'gif').reverse();
+
+                if (mediaCountDisplay) mediaCountDisplay.textContent = mediaMessages.length;
+
+                if (mediaGrid) {
+                    mediaGrid.innerHTML = '';
+                    if (mediaMessages.length === 0) {
+                        mediaGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #8696a0; font-size: 13px; padding: 10px;">No media shared</div>';
+                    } else {
+                        mediaMessages.slice(0, 6).forEach(msg => {
+                            const thumb = document.createElement('div');
+                            thumb.className = 'media-thumb';
+                            const mediaSrc = msg.image || msg.content;
+                            thumb.innerHTML = `<img src="${mediaSrc}" alt="media" style="width:100%; height:100%; object-fit:cover;">`;
+                            thumb.onclick = () => {
+                                if (typeof openImagePreview === 'function') {
+                                    openImagePreview(mediaSrc);
+                                } else {
+                                    window.open(mediaSrc, '_blank');
+                                }
+                            };
+                            mediaGrid.appendChild(thumb);
+                        });
+                    }
+                }
+            }).catch(e => {
+                console.warn('Failed to load media for info panel:', e);
+            });
+        }
+
+        // Update gallery peer name if exists
+        const galleryPeerName = document.getElementById('gallery-peer-name');
+        if (galleryPeerName) galleryPeerName.textContent = contact.name || contact.username;
+
+        console.log(`📋 Populated info panel for: ${contact.name}`);
     }
 
     clearMessagesArea() {
@@ -1602,7 +1991,7 @@ class FireflyChat {
         // Implementation if needed
     }
 
-    // Block User
+    // Block User - Only sets status, does NOT delete chat or messages
     async blockUser(uid) {
         if (!uid || !window.messageRouter?.database) return;
 
@@ -1610,34 +1999,17 @@ class FireflyChat {
             // 1. Add to blocked list in Firebase
             await window.messageRouter.database.ref(`users/${this.currentUser.uid}/blocked/${uid}`).set(true);
 
-            // 2. Delete all chat history
-            await window.messageRouter.database.ref(`messages/${this.currentUser.uid}/${uid}`).remove();
-            await window.messageRouter.database.ref(`messages/${uid}/${this.currentUser.uid}`).remove();
-            // Also delete temp messages
-            await window.messageRouter.database.ref(`temp_messages/${this.currentUser.uid}/${uid}`).remove();
-            await window.messageRouter.database.ref(`temp_messages/${uid}/${this.currentUser.uid}`).remove();
+            // 2. Update local state
+            if (!this.blockedUsers) this.blockedUsers = new Set();
+            this.blockedUsers.add(uid);
 
-            // 3. Remove from contacts (Disconnection)
-            this.contacts.delete(uid);
-            this.saveContacts();
-            this.updateContactsList();
-
-            // 4. Detach listeners
-            if (window.messageRouter) {
-                window.messageRouter.detachListener(`messages_${uid}`);
-                window.messageRouter.detachListener(`temp_messages_${uid}`);
-            }
-
-            // 5. Update UI if currently chatting
+            // 3. Update UI if currently chatting with this user
             if (this.currentPeer && this.currentPeer.uid === uid) {
-                this.currentPeer = null;
-                this.isConnected = false;
-                this.showWelcomeScreen();
-                const status = document.getElementById('connection-status');
-                if (status) status.innerHTML = '<span class="status-dot"></span><span>Select a contact to chat</span>';
+                this.updateChatInputForBlockedState(true);
             }
 
-            this.showNotification('User blocked successfully', 'success');
+            this.showNotification('User blocked', 'success');
+            this.loadBlockedUsers(); // Refresh blocked list
 
         } catch (error) {
             console.error('Error blocking user:', error);
@@ -1650,13 +2022,181 @@ class FireflyChat {
         if (!uid || !window.messageRouter?.database) return;
 
         try {
+            // 1. Remove from blocked list in Firebase
             await window.messageRouter.database.ref(`users/${this.currentUser.uid}/blocked/${uid}`).remove();
+
+            // 2. Update local state
+            if (this.blockedUsers) this.blockedUsers.delete(uid);
+
+            // 3. Update UI if currently chatting with this user
+            if (this.currentPeer && this.currentPeer.uid === uid) {
+                this.updateChatInputForBlockedState(false);
+            }
+
             this.showNotification('User unblocked', 'success');
-            this.loadBlockedUsers(); // Refresh list
+            this.loadBlockedUsers(); // Refresh blocked list
+
         } catch (error) {
             console.error('Error unblocking user:', error);
             this.showNotification('Failed to unblock user', 'error');
         }
+    }
+
+    // Toggle Block Status
+    async toggleBlockUser(uid) {
+        if (!uid) return;
+
+        const isBlocked = this.blockedUsers && this.blockedUsers.has(uid);
+
+        if (isBlocked) {
+            // If already blocked, just unblock (no confirm needed usually, or simple one)
+            await this.unblockUser(uid);
+        } else {
+            // If not blocked, show confirmation
+            window.showCustomConfirm({
+                icon: 'block',
+                iconColor: '#ef4444',
+                title: 'Block User?',
+                message: 'Blocked contacts will no longer be able to call you or send you messages.',
+                confirmText: 'Block',
+                confirmColor: '#ef4444',
+                onConfirm: () => this.blockUser(uid)
+            });
+        }
+    }
+
+    // Delete Chat - Remove from contacts and delete all messages
+    async deleteChat(uid) {
+        if (!uid || !this.currentUser?.uid) return;
+
+        try {
+            const currentUid = this.currentUser.uid;
+
+            // 1. Delete all messages from Firebase
+            if (window.messageRouter?.database) {
+                // Delete messages sent to us from this user
+                await window.messageRouter.database.ref(`messages/${currentUid}/${uid}`).remove();
+                // Delete messages we sent to this user
+                await window.messageRouter.database.ref(`messages/${uid}/${currentUid}`).remove();
+
+                // Delete temp messages
+                await window.messageRouter.database.ref(`temp_messages/${currentUid}/${uid}`).remove();
+                await window.messageRouter.database.ref(`temp_messages/${uid}/${currentUid}`).remove();
+
+                // Remove from connections (optional - keeps connection data clean)
+                await window.messageRouter.database.ref(`connections/${currentUid}/${uid}`).remove();
+                await window.messageRouter.database.ref(`connections/${uid}/${currentUid}`).remove();
+
+                console.log(`🗑️ Deleted all messages for chat with ${uid}`);
+            }
+
+            // 2. Remove from local contacts
+            this.contacts.delete(uid);
+            this.saveContacts();
+
+            // 3. Remove from favourites if present
+            if (this.favourites?.has(uid)) {
+                this.favourites.delete(uid);
+                if (window.messageRouter?.database) {
+                    await window.messageRouter.database.ref(`users/${currentUid}/favourites/${uid}`).remove();
+                }
+            }
+
+            // 4. Detach any message listeners
+            if (window.messageRouter) {
+                window.messageRouter.detachListener(`messages_${uid}`);
+                window.messageRouter.detachListener(`temp_messages_${uid}`);
+            }
+
+            // 5. Update UI
+            this.updateContactsList();
+
+            // 6. If currently chatting with this user, show welcome screen
+            if (this.currentPeer && this.currentPeer.uid === uid) {
+                this.currentPeer = null;
+                this.isConnected = false;
+                this.showWelcomeScreen();
+                const status = document.getElementById('connection-status');
+                if (status) status.innerHTML = '<span class="status-dot"></span><span>Select a contact to chat</span>';
+            }
+
+            this.showNotification('Chat deleted successfully', 'success');
+
+        } catch (error) {
+            console.error('Error deleting chat:', error);
+            this.showNotification('Failed to delete chat', 'error');
+        }
+    }
+
+    // ==================== FAVOURITES ====================
+
+    // Load favourites from Firebase
+    async loadFavourites() {
+        if (!this.currentUser?.uid || !window.messageRouter?.database) return;
+
+        if (!this.favourites) this.favourites = new Set();
+
+        try {
+            const snapshot = await window.messageRouter.database
+                .ref(`users/${this.currentUser.uid}/favourites`)
+                .once('value');
+
+            const favouritesData = snapshot.val();
+
+            this.favourites.clear();
+            if (favouritesData) {
+                Object.keys(favouritesData).forEach(uid => {
+                    if (favouritesData[uid]) {
+                        this.favourites.add(uid);
+                    }
+                });
+            }
+
+            console.log(`⭐ Loaded ${this.favourites.size} favourites`);
+
+            // Update contact items to show favourite indicator
+            this.updateContactsList();
+        } catch (error) {
+            console.error('Error loading favourites:', error);
+        }
+    }
+
+    // Toggle favourite status
+    async toggleFavourite(uid) {
+        if (!uid || !this.currentUser?.uid || !window.messageRouter?.database) return;
+
+        if (!this.favourites) this.favourites = new Set();
+
+        try {
+            const isFav = this.favourites.has(uid);
+            const favRef = window.messageRouter.database
+                .ref(`users/${this.currentUser.uid}/favourites/${uid}`);
+
+            if (isFav) {
+                // Remove from favourites
+                await favRef.remove();
+                this.favourites.delete(uid);
+                this.showNotification('Removed from favourites', 'info');
+            } else {
+                // Add to favourites
+                await favRef.set(true);
+                this.favourites.add(uid);
+                this.showNotification('Added to favourites', 'success');
+            }
+
+            // Update UI
+            this.updateContactsList();
+
+            console.log(`⭐ ${isFav ? 'Removed from' : 'Added to'} favourites: ${uid}`);
+        } catch (error) {
+            console.error('Error toggling favourite:', error);
+            this.showNotification('Failed to update favourites', 'error');
+        }
+    }
+
+    // Check if a contact is a favourite
+    isFavourite(uid) {
+        return this.favourites && this.favourites.has(uid);
     }
 
     // Load Blocked Users
@@ -1892,25 +2432,39 @@ async function clearChat() {
         return;
     }
 
-    if (confirm('Clear all messages? This will delete the chat history from both sides.')) {
-        try {
-            const currentUserId = window.fireflyChat.currentUser.uid;
-            const peerId = window.fireflyChat.currentPeer.uid;
+    const currentUserId = window.fireflyChat.currentUser.uid;
+    const peerId = window.fireflyChat.currentPeer.uid;
 
-            if (window.messageRouter?.database) {
-                // Delete messages in both directions
-                await window.messageRouter.database.ref(`messages/${currentUserId}/${peerId}`).remove();
-                await window.messageRouter.database.ref(`messages/${peerId}/${currentUserId}`).remove();
+    window.showCustomConfirm({
+        icon: 'delete_sweep',
+        iconColor: '#ef4444',
+        title: 'Clear Chat?',
+        message: 'This will delete all messages from this chat. The chat will remain in your list.',
+        confirmText: 'Clear',
+        confirmColor: '#ef4444',
+        onConfirm: async () => {
+            try {
+                if (window.messageRouter?.database) {
+                    // Delete messages in both directions
+                    await window.messageRouter.database.ref(`messages/${currentUserId}/${peerId}`).remove();
+                    await window.messageRouter.database.ref(`messages/${peerId}/${currentUserId}`).remove();
 
-                // Clear UI
-                window.fireflyChat.clearMessagesArea();
-                window.fireflyChat.showNotification('Chat history deleted', 'success');
+                    // Also delete temp messages
+                    await window.messageRouter.database.ref(`temp_messages/${currentUserId}/${peerId}`).remove();
+                    await window.messageRouter.database.ref(`temp_messages/${peerId}/${currentUserId}`).remove();
+
+                    // Clear UI
+                    window.fireflyChat.clearMessagesArea();
+                    window.fireflyChat.showNotification('Chat cleared successfully', 'success');
+
+                    console.log(`🗑️ Cleared all messages with ${peerId}`);
+                }
+            } catch (error) {
+                console.error('Error clearing chat:', error);
+                window.fireflyChat?.showNotification('Failed to clear chat', 'error');
             }
-        } catch (error) {
-            console.error('Error clearing chat:', error);
-            window.fireflyChat?.showNotification('Failed to clear chat', 'error');
         }
-    }
+    });
 }
 
 async function endChat() {
@@ -1953,6 +2507,14 @@ async function endChat() {
             console.error('Error ending chat:', error);
             window.fireflyChat?.showNotification('Failed to end chat', 'error');
         }
+    }
+}
+
+async function toggleBlockFromInfoPanel() {
+    if (window.fireflyChat && window.fireflyChat.currentPeer) {
+        window.fireflyChat.toggleBlockUser(window.fireflyChat.currentPeer.uid);
+    } else {
+        console.warn('No active chat to block/unblock');
     }
 }
 
@@ -2056,20 +2618,24 @@ window.toggleMessageOptions = function (btn) {
 window.sendMessage = () => window.fireflyChat?.sendMessage();
 window.attachFile = () => document.getElementById('file-input')?.click();
 window.filterContacts = (filter) => {
-    // Implement or wrap existing filter logic
+    // Update active chip
     const chips = document.querySelectorAll('.chip');
     chips.forEach(c => c.classList.remove('active'));
-    // Find chip with matching onclick or text?
-    // Usually the HTML has it as onclick="filterContacts('all')"
-    // So we just need to ensure the logic exists
+    if (event && event.target) event.target.classList.add('active');
+
+    // Filter contacts
     const contacts = document.querySelectorAll('.contact-item');
     contacts.forEach(contact => {
-        if (filter === 'all') contact.style.display = 'flex';
-        else if (filter === 'unread') {
+        if (filter === 'all') {
+            contact.style.display = 'flex';
+        } else if (filter === 'unread') {
             const hasUnread = contact.querySelector('.unread-badge');
             contact.style.display = hasUnread ? 'flex' : 'none';
+        } else if (filter === 'favourites') {
+            contact.style.display = contact.dataset.favorite === 'true' ? 'flex' : 'none';
+        } else if (filter === 'groups') {
+            contact.style.display = contact.dataset.isGroup === 'true' ? 'flex' : 'none';
         }
-        // ... handled in chat.html mostly, but good to have here
     });
 };
 

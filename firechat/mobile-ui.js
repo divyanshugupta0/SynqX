@@ -183,25 +183,22 @@ console.log('📱 Mobile UI Module Loaded');
         updateMobileMenu();
     }
 
-    // Sticky Menu Handler (User Request: "menu list opens but not closes when user clicks outer area")
+    // Sticky Menu Handler - Close when clicking outside
     window.stickyMenuHandler = function (e) {
-        if (!isMobile()) return;
-
         const menu = document.getElementById('chat-header-menu');
         // If menu is open (display block)
         if (menu && menu.style.display === 'block') {
-            const btn = e.target.closest('.header-btn'); // The toggle button (or any header btn)
+            const btn = e.target.closest('.header-btn[onclick*="toggleChatMenu"]'); // The toggle button
             const inMenu = e.target.closest('#chat-header-menu');
 
-            // If we clicked OUTSIDE menu AND OUTSIDE toggle button
+            // If we clicked OUTSIDE menu AND OUTSIDE toggle button, close it
             if (!inMenu && !btn) {
-                // Stop the event from reaching the code that closes the menu
-                e.stopPropagation();
+                menu.style.display = 'none';
             }
         }
     };
 
-    // Use capture phase to intercept before normal close handlers
+    // Use capture phase to intercept clicks
     document.addEventListener('click', window.stickyMenuHandler, true);
 
     // ===================================================================

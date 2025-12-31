@@ -797,9 +797,9 @@
                         <i class="material-icons-outlined">delete</i>
                         <div class="action-text">Clear chat</div>
                     </div>
-                    <div class="action-item danger" onclick="endChat()">
-                        <i class="material-icons-outlined">block</i>
-                        <div class="action-text">Block User</div>
+                    <div class="action-item danger" id="info-block-btn" onclick="toggleBlockFromInfoPanel()">
+                        <i class="material-icons-outlined" id="info-block-icon">block</i>
+                        <div class="action-text" id="info-block-text">Block User</div>
                     </div>
                     <div class="action-item danger">
                         <i class="material-icons-outlined">thumb_down</i>
@@ -1294,23 +1294,42 @@
         }
     </style>
 
+    <!-- Custom Confirm Modal (Reusable) -->
+    <div id="custom-confirm-modal" class="modal-overlay" style="display: none; z-index: 100000;">
+        <div class="modal-content" style="max-width: 420px; text-align: center; padding: 32px;">
+            <i id="confirm-modal-icon" class="material-icons"
+                style="font-size: 56px; color: #54656f; margin-bottom: 20px;">help_outline</i>
+            <h2 id="confirm-modal-title" style="font-size: 20px; margin-bottom: 12px;">Confirm</h2>
+            <p id="confirm-modal-message"
+                style="color: #667781; font-size: 14px; line-height: 20px; margin-bottom: 24px;">
+                Are you sure?
+            </p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button onclick="closeCustomConfirm()" class="btn-cancel"
+                    style="flex: 1; max-width: 140px;">Cancel</button>
+                <button id="confirm-modal-btn" onclick="executeCustomConfirm()" class="btn-save"
+                    style="flex: 1; max-width: 140px;">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Global Context Menu -->
     <div id="contact-context-menu" class="context-menu">
         <div class="context-menu-item" onclick="handleContextMenuAction('profile')">
             <i class="material-icons" style="font-size: 16px;">person</i>
             <span>View Profile</span>
         </div>
-        <div class="context-menu-item" onclick="handleContextMenuAction('disconnect')">
-            <i class="material-icons" style="font-size: 16px;">link_off</i>
-            <span>Disconnect</span>
+        <div class="context-menu-item" id="favourite-menu-item" onclick="handleContextMenuAction('favourite')">
+            <i class="material-icons" style="font-size: 16px;">star</i>
+            <span id="favourite-menu-text">Add to Favourites</span>
         </div>
         <div class="context-menu-item" onclick="handleContextMenuAction('delete')">
             <i class="material-icons" style="font-size: 16px;">delete</i>
             <span>Delete Chat</span>
         </div>
-        <div class="context-menu-item danger" onclick="handleContextMenuAction('block')">
-            <i class="material-icons" style="font-size: 16px;">block</i>
-            <span>Block User</span>
+        <div class="context-menu-item danger" id="block-menu-item" onclick="handleContextMenuAction('block')">
+            <i class="material-icons" id="block-menu-icon" style="font-size: 16px;">block</i>
+            <span id="block-menu-text">Block User</span>
         </div>
     </div>
 
@@ -1318,8 +1337,59 @@
 
         // Context Menu Wrapper
         function handleContextMenuAction(action) {
+            // Close menu and overlay immediately
+            const menu = document.getElementById('contact-context-menu');
+            const overlay = document.getElementById('context-menu-overlay');
+            if (menu) menu.style.display = 'none';
+            if (overlay) overlay.style.display = 'none';
+
+            // Then handle the action
             if (window.fireflyChat) window.fireflyChat.handleContextMenuAction(action);
         }
+
+        // Custom Confirm Modal Functions
+        window.customConfirmCallback = null;
+
+        window.showCustomConfirm = function (options) {
+            const modal = document.getElementById('custom-confirm-modal');
+            const icon = document.getElementById('confirm-modal-icon');
+            const title = document.getElementById('confirm-modal-title');
+            const message = document.getElementById('confirm-modal-message');
+            const btn = document.getElementById('confirm-modal-btn');
+
+            if (!modal) return Promise.resolve(false);
+
+            // Set content
+            if (icon) {
+                icon.textContent = options.icon || 'help_outline';
+                icon.style.color = options.iconColor || '#54656f';
+            }
+            if (title) title.textContent = options.title || 'Confirm';
+            if (message) message.textContent = options.message || 'Are you sure?';
+            if (btn) {
+                btn.textContent = options.confirmText || 'Confirm';
+                btn.style.background = options.confirmColor || '#00a884';
+            }
+
+            // Store callback
+            window.customConfirmCallback = options.onConfirm;
+
+            // Show modal
+            modal.style.display = 'flex';
+        };
+
+        window.closeCustomConfirm = function () {
+            const modal = document.getElementById('custom-confirm-modal');
+            if (modal) modal.style.display = 'none';
+            window.customConfirmCallback = null;
+        };
+
+        window.executeCustomConfirm = function () {
+            if (window.customConfirmCallback) {
+                window.customConfirmCallback();
+            }
+            window.closeCustomConfirm();
+        };
 
         // Logout Confirmation Functions (window scope for global access)
         window.confirmLogout = function () {
