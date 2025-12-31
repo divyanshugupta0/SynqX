@@ -9,12 +9,12 @@
     "orientation": "portrait-primary",
     "icons": [
         {
-            "src": "chat.png",
+            "src": "chatbgremoved.png",
             "sizes": "192x192",
             "type": "image/png"
         },
         {
-            "src": "chat.png",
+            "src": "chatbgremoved.png",
             "sizes": "512x512",
             "type": "image/png"
         }

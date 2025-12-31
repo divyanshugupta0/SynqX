@@ -169,6 +169,52 @@ class FireflyChat {
     initializeUI() {
         console.log('🎨 Initializing UI...');
 
+        // PWA Install Logic
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent Chrome 67 and earlier from automatically showing the prompt
+            e.preventDefault();
+            // Stash the event so it can be triggered later.
+            window.deferredInstallPrompt = e;
+            console.log('📲 PWA install prompt intercepted');
+
+            // Auto-show install promotion
+            setTimeout(() => {
+                const installBtn = document.createElement('div');
+                installBtn.id = 'pwa-install-btn';
+                installBtn.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: #00a884;
+                    color: white;
+                    padding: 12px 24px;
+                    border-radius: 24px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    z-index: 9999;
+                    cursor: pointer;
+                    font-weight: 500;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    animation: slideUp 0.3s ease-out;
+                `;
+                installBtn.innerHTML = '<i class="material-icons">download</i> Install App';
+
+                installBtn.onclick = async () => {
+                    if (window.deferredInstallPrompt) {
+                        window.deferredInstallPrompt.prompt();
+                        const { outcome } = await window.deferredInstallPrompt.userChoice;
+                        console.log(`User response to the install prompt: ${outcome}`);
+                        window.deferredInstallPrompt = null;
+                        installBtn.remove();
+                    }
+                };
+
+                document.body.appendChild(installBtn);
+            }, 2000); // Show after 2 seconds
+        });
+
         // Sidebar icon handlers
         const sidebarIcons = document.querySelectorAll('.sidebar-icon');
         if (sidebarIcons.length > 0) {
@@ -431,6 +477,7 @@ class FireflyChat {
 
         window.messageRouter.database.ref(`messages/${this.currentUser.uid}`).on('child_added', handleIncomingChatNode);
         window.messageRouter.database.ref(`temp_messages/${this.currentUser.uid}`).on('child_added', handleIncomingChatNode);
+        window.messageRouter.database.ref(`pending_messages/${this.currentUser.uid}`).on('child_added', handleIncomingChatNode);
 
 
         // Cleanup on page unload
@@ -1680,9 +1727,35 @@ class FireflyChat {
     saveContacts() {
         const contactsData = Array.from(this.contacts.entries());
         localStorage.setItem('chatContacts', JSON.stringify(contactsData));
+
+        // Sync with Firebase (Cloud Persistence)
+        if (this.currentUser && this.currentUser.uid && window.messageRouter?.database) {
+            const contactsObj = {};
+            this.contacts.forEach((contact, key) => {
+                // Sanitize: Firebase throws error on 'undefined', so we must strip them or replace them
+                // JSON.parse(JSON.stringify()) effectively removes keys with undefined values
+                try {
+                    const cleanContact = JSON.parse(JSON.stringify(contact));
+
+                    // Explicitly ensure critical fields are not undefined (set defaults if needed)
+                    if (cleanContact.profilePicture === undefined) cleanContact.profilePicture = 'anony.jpg';
+                    if (cleanContact.name === undefined) cleanContact.name = cleanContact.username || 'User';
+
+                    contactsObj[key] = cleanContact;
+                } catch (e) {
+                    console.warn('Skipping invalid contact for sync:', key);
+                }
+            });
+
+            if (Object.keys(contactsObj).length > 0) {
+                window.messageRouter.database.ref(`contacts/${this.currentUser.uid}`).update(contactsObj)
+                    .catch(e => console.error('Error syncing contacts to Firebase:', e));
+            }
+        }
     }
 
-    loadContacts() {
+    async loadContacts() {
+        // 1. Load from LocalStorage (Fast/Offline)
         const saved = localStorage.getItem('chatContacts');
         if (saved) {
             try {
@@ -1714,22 +1787,60 @@ class FireflyChat {
                     }
                 });
 
-                // Save cleaned connection list
+                // Save cleaned connection list (Update ONLY local storage to avoid loop)
                 if (this.contacts.size !== rawContacts.length) {
-                    this.saveContacts();
+                    const cleaned = Array.from(this.contacts.entries());
+                    localStorage.setItem('chatContacts', JSON.stringify(cleaned));
                     console.log('🧹 cleanup: Removed duplicate/invalid contacts');
                 }
 
                 this.updateContactsList();
-                this.setupProfileListeners();
-
-                // Init Unread
-                if (!this.unreadCounts) this.unreadCounts = new Map();
-                this.contacts.forEach((c, k) => this.setupUnreadListener(k));
             } catch (error) {
                 console.error('Error loading contacts:', error);
+                this.contacts = new Map();
+            }
+        } else {
+            this.contacts = new Map();
+        }
+
+        // 2. Sync from Firebase (Source of Truth)
+        if (this.currentUser && this.currentUser.uid && window.messageRouter?.database) {
+            try {
+                const snapshot = await window.messageRouter.database.ref(`contacts/${this.currentUser.uid}`).once('value');
+                const remoteContacts = snapshot.val();
+
+                if (remoteContacts) {
+                    let updated = false;
+                    Object.entries(remoteContacts).forEach(([uid, contact]) => {
+                        if (!this.contacts.has(uid)) {
+                            this.contacts.set(uid, contact);
+                            updated = true;
+                        } else {
+                            // Optional: Update local contact with fresh data if needed
+                            // const local = this.contacts.get(uid);
+                            // if (contact.lastRead > local.lastRead) ...
+                        }
+                    });
+
+                    if (updated) {
+                        console.log('☁️ Synced contacts from Firebase');
+                        this.updateContactsList();
+                        // Save merged list to local storage
+                        const contactsData = Array.from(this.contacts.entries());
+                        localStorage.setItem('chatContacts', JSON.stringify(contactsData));
+                    }
+                }
+            } catch (e) {
+                console.warn('Error loading remote contacts:', e);
             }
         }
+
+        // Final Setup: Listeners
+        this.setupProfileListeners();
+
+        // Init Unread
+        if (!this.unreadCounts) this.unreadCounts = new Map();
+        this.contacts.forEach((c, k) => this.setupUnreadListener(k));
     }
 
     // Listen for profile updates of contacts
