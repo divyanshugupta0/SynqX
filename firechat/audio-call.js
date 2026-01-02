@@ -66,11 +66,8 @@
                         <span>End-to-end encrypted</span>
                     </div>
                     <div class="call-window-controls">
-                        <button class="call-window-btn" onclick="window.audioCallManager.minimizeCall()">
+                        <button class="call-window-btn" onclick="window.audioCallManager.toggleMinimize()">
                             <i class="material-icons">remove</i>
-                        </button>
-                        <button class="call-window-btn" onclick="window.audioCallManager.endCall()">
-                            <i class="material-icons">close</i>
                         </button>
                     </div>
                 </div>
@@ -84,14 +81,21 @@
                         <div class="call-pulse-ring"></div>
                     </div>
                     
-                    <div class="call-user-name" id="call-user-name">User</div>
-                    <div class="call-status" id="call-status">Calling...</div>
-                    <div class="call-timer" id="call-timer" style="display: none;">00:00</div>
+                    <div class="call-info-group">
+                        <div class="call-user-name" id="call-user-name">User</div>
+                        <div class="call-status" id="call-status">Calling...</div>
+                        <div class="call-timer" id="call-timer" style="display: none;">00:00</div>
+                    </div>
                 </div>
 
                 <!-- OUTGOING CALL Controls (shown for caller) -->
                 <div class="call-popup-footer" id="outgoing-controls">
                     <div class="call-controls-row">
+                        <!-- Maximize Button (Hidden in full mode, shown in minimized) -->
+                        <button class="call-control-btn minimized-maximize-btn" onclick="window.audioCallManager.toggleMinimize()" title="Maximize">
+                            <i class="material-icons">open_in_full</i>
+                        </button>
+                        
                         <button class="call-control-btn" id="btn-camera" onclick="window.audioCallManager.toggleCamera()" title="Camera off">
                             <i class="material-icons">videocam_off</i>
                             <span class="control-dropdown"><i class="material-icons">expand_more</i></span>
@@ -148,12 +152,29 @@
         }
 
         makeDraggable(element) {
-            const handle = element.querySelector('#call-drag-handle');
+            // Drag handle is the element itself now to support minimized mode dragging
+            // We just need to filter out button clicks
             let isDragging = false;
             let startX, startY, startLeft, startTop;
 
-            handle.addEventListener('mousedown', (e) => {
-                if (e.target.closest('.call-window-btn')) return;
+            const isInteractive = (target) => {
+                return target.closest('button') || target.closest('.call-window-btn') ||
+                    target.closest('.call-control-btn') || target.closest('.call-action-btn') ||
+                    target.closest('.call-end-btn') || target.closest('.call-accept-btn') ||
+                    target.closest('.call-decline-btn');
+            };
+
+            const onMouseDown = (e) => {
+                // If interactive element, ignore
+                if (isInteractive(e.target)) return;
+
+                // SMART DRAG LOGIC:
+                // 1. If minimized: allow drag from ANYWHERE on the element
+                // 2. If NOT minimized: allow drag ONLY from the header
+                const isMinimized = element.classList.contains('minimized');
+                const isHeader = e.target.closest('.call-popup-header');
+
+                if (!isMinimized && !isHeader) return;
 
                 isDragging = true;
                 startX = e.clientX;
@@ -167,10 +188,11 @@
                 element.style.transform = 'none';
                 element.style.left = startLeft + 'px';
                 element.style.top = startTop + 'px';
-
                 element.style.transition = 'none';
-                handle.style.cursor = 'grabbing';
-            });
+                element.style.cursor = 'grabbing';
+            };
+
+            element.addEventListener('mousedown', onMouseDown);
 
             document.addEventListener('mousemove', (e) => {
                 if (!isDragging) return;
@@ -181,7 +203,6 @@
                 let newLeft = startLeft + dx;
                 let newTop = startTop + dy;
 
-                // Bounds checking
                 const maxLeft = window.innerWidth - element.offsetWidth;
                 const maxTop = window.innerHeight - element.offsetHeight;
 
@@ -198,13 +219,22 @@
                 if (isDragging) {
                     isDragging = false;
                     element.style.transition = '';
-                    handle.style.cursor = 'grab';
+                    element.style.cursor = '';
                 }
             });
 
-            // Touch support for mobile
-            handle.addEventListener('touchstart', (e) => {
-                if (e.target.closest('.call-window-btn')) return;
+            // Touch support for mobile dragging
+            element.addEventListener('touchstart', (e) => {
+                if (isInteractive(e.target)) return;
+
+                // SMART DRAG LOGIC (TOUCH):
+                const isMinimized = element.classList.contains('minimized');
+                const isHeader = e.target.closest('.call-popup-header');
+
+                if (!isMinimized && !isHeader) return;
+
+                // Prevent default to stop scroll
+                if (e.cancelable) e.preventDefault();
 
                 const touch = e.touches[0];
                 isDragging = true;
@@ -215,35 +245,35 @@
                 startLeft = rect.left;
                 startTop = rect.top;
 
-                // Clear transform to allow free positioning
                 element.style.transform = 'none';
                 element.style.left = startLeft + 'px';
                 element.style.top = startTop + 'px';
-            });
+            }, { passive: false });
 
             document.addEventListener('touchmove', (e) => {
                 if (!isDragging) return;
 
+                // Prevent scroll while dragging
+                if (e.cancelable) e.preventDefault();
+
                 const touch = e.touches[0];
                 const dx = touch.clientX - startX;
                 const dy = touch.clientY - startY;
-
                 let newLeft = startLeft + dx;
                 let newTop = startTop + dy;
 
                 const maxLeft = window.innerWidth - element.offsetWidth;
                 const maxTop = window.innerHeight - element.offsetHeight;
-
                 newLeft = Math.max(0, Math.min(newLeft, maxLeft));
                 newTop = Math.max(0, Math.min(newTop, maxTop));
 
                 element.style.left = newLeft + 'px';
                 element.style.top = newTop + 'px';
-            });
+                element.style.right = 'auto';
+                element.style.bottom = 'auto';
+            }, { passive: false });
 
-            document.addEventListener('touchend', () => {
-                isDragging = false;
-            });
+            document.addEventListener('touchend', () => isDragging = false);
         }
 
         setupFirebaseListeners() {
@@ -611,25 +641,35 @@
         listenForCallEnd() {
             if (!this.callId || !this.currentUser) return;
 
-            // Listen for removal of call data (other party ended the call)
-            const callRef = firebase.database().ref(`calls/${this.currentUser.uid}/${this.callId}`);
+            // Determine where the call data lives based on role
+            // Initiator listens to Peer's node (where offer was sent)
+            // Receiver listens to Own node (where offer was received)
+            let targetUid = this.currentUser.uid;
 
-            // Flag to track if we've seen the call data exist at least once
-            let callDataExisted = false;
+            if (this.isInitiator && this.currentPeer) {
+                targetUid = this.currentPeer.uid;
+            }
+
+            const callRef = firebase.database().ref(`calls/${targetUid}/${this.callId}`);
+
+            // Skip the initial callback - only react to CHANGES after setup
+            let initialLoad = true;
 
             callRef.on('value', (snapshot) => {
-                if (snapshot.exists()) {
-                    // Call data exists, mark it
-                    callDataExisted = true;
-                } else if (callDataExisted && this.callState !== 'idle') {
-                    // Data existed before but now it's gone - other party ended the call
-                    console.log('Call ended by other party');
+                // Skip first callback (initial load)
+                if (initialLoad) {
+                    initialLoad = false;
+                    return;
+                }
+
+                // If data is null, call has ended
+                if (!snapshot.exists() && this.callState !== 'idle') {
+                    console.log('Call ended (remote data removed)');
                     this.showNotification('Call ended', 'info');
                     this.endCallLocally();
                 }
             });
 
-            // Also store the ref so we can turn off the listener later
             this.callEndListenerRef = callRef;
         }
 
@@ -656,7 +696,7 @@
                 this.peerConnection = null;
             }
 
-            // Turn off Firebase listeners
+            // Turn off ALL Firebase listeners
             if (this.callEndListenerRef) {
                 this.callEndListenerRef.off();
                 this.callEndListenerRef = null;
@@ -665,38 +705,55 @@
                 this.eventsListenerRef.off();
                 this.eventsListenerRef = null;
             }
-
-            // Save call log (Other party ended call)
-            const type = this.isInitiator ? 'outgoing' : 'incoming';
-            let status = 'completed';
-            if (this.callDuration === 0) {
-                status = this.isInitiator ? 'declined' : 'missed';
+            if (this.answerListenerRef) {
+                this.answerListenerRef.off();
+                this.answerListenerRef = null;
             }
-            this.saveCallLog(type, status);
+            if (this.candidatesListenerRef) {
+                this.candidatesListenerRef.off();
+                this.candidatesListenerRef = null;
+            }
+            if (this.renegotiateListenerRef) {
+                this.renegotiateListenerRef.off();
+                this.renegotiateListenerRef = null;
+            }
+
+            // Save call log if not already saved (avoid duplicates?)
+            // If remote ended it, we should log it.
+            if (this.callState !== 'idle') {
+                const type = this.isInitiator ? 'outgoing' : 'incoming';
+                let status = 'completed';
+                if (this.callDuration === 0) {
+                    // If duration 0 and remote ended, it's either declined or missed (if incoming) or just cancelled (if outgoing)
+                    // If I am initiator and remote ended -> Declined.
+                    // If I am receiver and remote ended -> Missed (if I didn't answer yet?) or Cancelled by caller.
+                    if (this.isInitiator) status = 'declined';
+                    else status = 'missed'; // simplified
+                }
+                this.saveCallLog(type, status);
+            }
 
             // Stop timer and ringtone
             this.stopTimer();
             this.stopRingtone();
 
-            // Show "Call ended" message before closing
-            const callStatus = this.callPopup?.querySelector('#call-status');
-            const timerEl = this.callPopup?.querySelector('#call-timer');
-            const outgoingControls = this.callPopup?.querySelector('#outgoing-controls');
-            const incomingControls = this.callPopup?.querySelector('#incoming-controls');
+            // FULL STATE RESET
+            this.callState = 'idle';
+            this.callId = null;
+            this.isMuted = false;
+            this.remoteScreenActive = false;
+            this.isHandRaised = false;
 
-            // Format call duration
-            const minutes = Math.floor(this.callDuration / 60).toString().padStart(2, '0');
-            const seconds = (this.callDuration % 60).toString().padStart(2, '0');
-            const durationText = this.callDuration > 0 ? ` • ${minutes}:${seconds}` : '';
+            // Reset UI buttons for Camera/Mute
+            const cameraBtn = document.getElementById('btn-camera');
+            if (cameraBtn) cameraBtn.classList.remove('active');
 
-            if (callStatus) callStatus.textContent = `Call ended${durationText}`;
-            if (timerEl) timerEl.style.display = 'none';
-            if (outgoingControls) outgoingControls.style.display = 'none';
-            if (incomingControls) incomingControls.style.display = 'none';
-
-            // Hide pulse animation
-            const pulseRing = this.callPopup?.querySelector('.call-pulse-ring');
-            if (pulseRing) pulseRing.style.display = 'none';
+            const muteBtn = document.getElementById('btn-mute');
+            if (muteBtn) {
+                muteBtn.classList.remove('active');
+                const icon = muteBtn.querySelector('i.material-icons');
+                if (icon) icon.textContent = 'mic';
+            }
 
             // Hide screen share previews and restore avatar
             const screenPreview = this.callPopup?.querySelector('.screen-share-preview');
@@ -709,18 +766,12 @@
             if (handIndicator) handIndicator.style.display = 'none';
             if (avatarContainer) avatarContainer.style.display = '';
 
-            // Reset state
-            this.callState = 'idle';
-            this.callId = null;
-            this.isMuted = false;
-            this.remoteScreenActive = false;
-            this.isHandRaised = false;
-
-            // Close popup after 2 seconds
-            setTimeout(() => {
-                this.hideCallPopup();
-            }, 2000);
+            // Hide popup immediately
+            this.hideCallPopup();
         }
+
+
+
 
         async acceptCall() {
             this.stopRingtone();
@@ -878,8 +929,11 @@
 
             // Position popup at center initially
             this.callPopup.style.display = 'flex';
+            this.callPopup.classList.remove('minimized'); // Reset minimized state
             this.callPopup.style.left = '50%';
             this.callPopup.style.top = '50%';
+            this.callPopup.style.right = 'auto'; // Reset potential minimized styling
+            this.callPopup.style.bottom = 'auto';
             this.callPopup.style.transform = 'translate(-50%, -50%)';
         }
 
@@ -1261,11 +1315,33 @@
             this.showNotification('More options coming soon', 'info');
         }
 
-        minimizeCall() {
+        toggleMinimize() {
             if (!this.callPopup) return;
 
+            // Toggle class
             this.callPopup.classList.toggle('minimized');
+
+            // If maximizing (removing minimized class), reset position to center
+            if (!this.callPopup.classList.contains('minimized')) {
+                this.callPopup.style.left = '50%';
+                this.callPopup.style.top = '50%';
+                this.callPopup.style.transform = 'translate(-50%, -50%)';
+            } else {
+                // Minimizing: Reset transform for drag logic
+                this.callPopup.style.transform = 'none';
+                // Default minimized position (bottom-rightish or where dragged)
+                // We let it stay where it is or reset to default if needed. 
+                // For now, let's reset to bottom right to be safe if it's the first time
+                if (!this.callPopup.style.left || this.callPopup.style.left === '50%') {
+                    this.callPopup.style.left = 'auto';
+                    this.callPopup.style.right = '20px';
+                    this.callPopup.style.top = 'auto';
+                    this.callPopup.style.bottom = '20px';
+                }
+            }
         }
+
+
 
         endCall() {
             console.log('Ending call...');
@@ -1326,6 +1402,17 @@
             this.remoteScreenActive = false;
             this.isHandRaised = false;
 
+            // Reset UI buttons for Camera/Mute
+            const cameraBtn = document.getElementById('btn-camera');
+            if (cameraBtn) cameraBtn.classList.remove('active');
+
+            const muteBtn = document.getElementById('btn-mute');
+            if (muteBtn) {
+                muteBtn.classList.remove('active');
+                const icon = muteBtn.querySelector('i.material-icons');
+                if (icon) icon.textContent = 'mic';
+            }
+
             // Hide screen share previews and restore avatar
             const screenPreview = this.callPopup?.querySelector('.screen-share-preview');
             const remoteScreen = this.callPopup?.querySelector('.remote-screen-share');
@@ -1337,7 +1424,7 @@
             if (handIndicator) handIndicator.style.display = 'none';
             if (avatarContainer) avatarContainer.style.display = '';
 
-            // Hide popup immediately for the person who clicked end
+            // Hide popup immediately
             this.hideCallPopup();
         }
 

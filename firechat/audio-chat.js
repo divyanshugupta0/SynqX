@@ -44,6 +44,11 @@ function startRecording(stream, mimeType) {
     mediaRecorder.start();
     recordStartTime = Date.now();
 
+    // Notify peer we are recording
+    if (window.fireflyChat && window.fireflyChat.sendTypingStatus) {
+        window.fireflyChat.sendTypingStatus(true, 'recording');
+    }
+
     // Show UI
     const ui = document.getElementById('recording-ui');
     const micBtn = document.getElementById('mic-btn');
@@ -103,6 +108,11 @@ function resetRecordingUI() {
     clearInterval(recordInterval);
     const ui = document.getElementById('recording-ui');
     if (ui) ui.style.display = 'none';
+
+    // Clear recording status
+    if (window.fireflyChat && window.fireflyChat.sendTypingStatus) {
+        window.fireflyChat.sendTypingStatus(false);
+    }
 
     const micBtn = document.getElementById('mic-btn');
     if (micBtn) {

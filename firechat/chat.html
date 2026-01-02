@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <title>SynqX</title>
-    <link rel="icon" type="image/png" href="chatbgremoved.png">
+    <link rel="icon" type="image/png" href="chat.png">
 
     <!-- Icons - Load FIRST for proper rendering -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet">
@@ -113,11 +113,11 @@
         <!-- Header -->
         <header class="chat-header" id="chat-main-header" style="display: none;">
             <div class="header-title">
-                <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="header-content-wrapper">
                     <img id="chat-header-avatar" src="anony.jpg"
                         style="width: 40px; height: 40px; border-radius: 50%; display: none; object-fit: cover;">
-                    <div>
-                        <h1 id="chat-header-name" style="margin: 0; font-size: 16px; line-height: 1.2;">SynqX
+                    <div class="header-text-info">
+                        <h1 id="chat-header-name">SynqX
                         </h1>
                         <div class="header-status" id="connection-status" style="margin-top: 2px;">
                             <span class="status-dot"></span>
@@ -1491,8 +1491,8 @@
                 if (filter === 'all') {
                     contact.style.display = 'flex';
                 } else if (filter === 'unread') {
-                    const hasUnread = contact.querySelector('.unread-badge');
-                    contact.style.display = hasUnread ? 'flex' : 'none';
+                    // Use data attribute for filtering
+                    contact.style.display = contact.dataset.unread === 'true' ? 'flex' : 'none';
                 } else if (filter === 'favourites') {
                     contact.style.display = contact.dataset.favorite === 'true' ? 'flex' : 'none';
                 } else if (filter === 'groups') {

@@ -58,7 +58,21 @@ class FireflyChat {
     checkAuth() {
         console.log('🔐 Checking authentication...');
 
-        const isLoggedOut = localStorage.getItem('isLoggedOut') === 'true';
+        // Safely access localStorage (may fail due to tracking prevention)
+        let isLoggedOut = false;
+        let sessionUser = null;
+        let userId = null;
+        let userName = null;
+
+        try {
+            isLoggedOut = localStorage.getItem('isLoggedOut') === 'true';
+            sessionUser = sessionStorage.getItem('currentUser');
+            userId = localStorage.getItem('userId');
+            userName = localStorage.getItem('userName');
+        } catch (e) {
+            console.warn('⚠️ Storage blocked by Tracking Prevention:', e.message);
+            // Continue with defaults - will try to authenticate via Firebase
+        }
 
         // If user explicitly logged out, redirect
         if (isLoggedOut) {
@@ -67,15 +81,12 @@ class FireflyChat {
             return false;
         }
 
-        // Check for any form of user data
-        const sessionUser = sessionStorage.getItem('currentUser');
-        const userId = localStorage.getItem('userId');
-        const userName = localStorage.getItem('userName');
-
         // If we have ANY user data, consider them authenticated
         if (sessionUser || userId || userName) {
             console.log('✅ User authenticated');
-            localStorage.setItem('isLoggedOut', 'false');
+            try {
+                localStorage.setItem('isLoggedOut', 'false');
+            } catch (e) { /* ignore */ }
             return true;
         }
 
@@ -162,8 +173,134 @@ class FireflyChat {
             }
 
             console.log('✅ User data loaded:', this.currentUser.name);
+
+            // Check if user has profile picture - show setup prompt if not
+            this.checkProfileSetup();
         } catch (error) {
             console.error('❌ Error loading user data:', error);
+        }
+    }
+
+    // Check if user needs to complete profile setup
+    checkProfileSetup() {
+        // Check Firebase for profile picture
+        const hasProfilePic = this.currentUser.profilePicture &&
+            this.currentUser.profilePicture !== 'anony.jpg' &&
+            this.currentUser.profilePicture !== '';
+
+        if (!hasProfilePic) {
+            // Show setup popup
+            this.showProfileSetupPopup();
+        }
+    }
+
+    // Show WhatsApp-style profile setup popup
+    showProfileSetupPopup() {
+        // Remove existing popup if any
+        const existing = document.getElementById('profile-setup-popup');
+        if (existing) existing.remove();
+
+        const popup = document.createElement('div');
+        popup.id = 'profile-setup-popup';
+        popup.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            backdrop-filter: blur(4px);
+        `;
+
+        popup.innerHTML = `
+            <div style="
+                background: linear-gradient(145deg, #1f2c34, #111b21);
+                border-radius: 16px;
+                padding: 32px 28px;
+                max-width: 320px;
+                width: 90%;
+                text-align: center;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+                border: 1px solid rgba(255, 255, 255, 0.05);
+            ">
+                <div style="
+                    width: 80px;
+                    height: 80px;
+                    border-radius: 50%;
+                    background: linear-gradient(135deg, #00a884, #25d366);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 20px;
+                ">
+                    <i class="material-icons" style="font-size: 40px; color: white;">person</i>
+                </div>
+                <h3 style="
+                    color: #e9edef;
+                    font-size: 20px;
+                    font-weight: 600;
+                    margin: 0 0 12px;
+                ">Complete Your Profile</h3>
+                <p style="
+                    color: #8696a0;
+                    font-size: 14px;
+                    line-height: 1.5;
+                    margin: 0 0 24px;
+                ">Add a profile photo so your friends can recognize you</p>
+                <button id="profile-setup-btn" style="
+                    background: linear-gradient(135deg, #00a884, #25d366);
+                    color: white;
+                    border: none;
+                    padding: 14px 32px;
+                    border-radius: 24px;
+                    font-size: 15px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    width: 100%;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 4px 15px rgba(0, 168, 132, 0.3);
+                ">
+                    <i class="material-icons" style="font-size: 18px; vertical-align: middle; margin-right: 8px;">photo_camera</i>
+                    Setup Profile
+                </button>
+            </div>
+        `;
+
+        document.body.appendChild(popup);
+
+        // Add hover effect
+        const btn = document.getElementById('profile-setup-btn');
+        if (btn) {
+            btn.addEventListener('mouseenter', () => {
+                btn.style.transform = 'scale(1.02)';
+                btn.style.boxShadow = '0 6px 20px rgba(0, 168, 132, 0.4)';
+            });
+            btn.addEventListener('mouseleave', () => {
+                btn.style.transform = 'scale(1)';
+                btn.style.boxShadow = '0 4px 15px rgba(0, 168, 132, 0.3)';
+            });
+
+            btn.addEventListener('click', () => {
+                // Close popup
+                popup.remove();
+
+                // Open profile modal
+                if (typeof openProfileModal === 'function') {
+                    openProfileModal(true);
+                } else if (window.openProfileModal) {
+                    window.openProfileModal(true);
+                } else {
+                    // Fallback: try to open profile panel
+                    const profileModal = document.getElementById('profile-modal');
+                    if (profileModal) {
+                        profileModal.classList.add('active');
+                    }
+                }
+            });
         }
     }
     initializeUI() {
@@ -199,9 +336,22 @@ class FireflyChat {
                     gap: 8px;
                     animation: slideUp 0.3s ease-out;
                 `;
-                installBtn.innerHTML = '<i class="material-icons">download</i> Install App';
+                installBtn.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <i class="material-icons">download</i> 
+                        <span>Install App</span>
+                    </div>
+                    <i class="material-icons" id="pwa-close-btn" style="margin-left: 10px; font-size: 15px; opacity: 0.8; padding: 4px; border-radius: 50%; background: rgba(0,0,0,0.1);">close</i>
+                `;
 
-                installBtn.onclick = async () => {
+                installBtn.onclick = async (e) => {
+                    // Check if close button was clicked
+                    if (e.target.closest('#pwa-close-btn')) {
+                        e.stopPropagation();
+                        installBtn.remove();
+                        return;
+                    }
+
                     if (window.deferredInstallPrompt) {
                         window.deferredInstallPrompt.prompt();
                         const { outcome } = await window.deferredInstallPrompt.userChoice;
@@ -241,6 +391,25 @@ class FireflyChat {
                     if (window.openCallsModal) window.openCallsModal();
                 });
             }
+
+            // Expose Call Functions Globally
+            window.startAudioCall = () => {
+                if (window.audioCallManager && this.currentPeer) {
+                    window.audioCallManager.initiateCall(this.currentPeer.uid, false);
+                } else if (!this.currentPeer) {
+                    this.showNotification('Select a contact to call', 'warning');
+                } else {
+                    console.error('AudioCallManager not initialized');
+                }
+            };
+
+            window.startVideoCall = () => {
+                if (window.audioCallManager && this.currentPeer) {
+                    window.audioCallManager.initiateCall(this.currentPeer.uid, true);
+                } else if (!this.currentPeer) {
+                    this.showNotification('Select a contact to call', 'warning');
+                }
+            };
 
             // Settings icon (index 3)
             if (sidebarIcons[3]) {
@@ -331,6 +500,19 @@ class FireflyChat {
                         previewPanel.style.display = 'none';
                         window.currentLinkMeta = null;
                     }
+                }
+
+                // Typing Status
+                if (this.currentPeer && this.isConnected) {
+                    this.sendTypingStatus(true);
+
+                    // Clear previous debounce
+                    if (this.typingTimeout) clearTimeout(this.typingTimeout);
+
+                    // Stop typing after 3s of inactivity
+                    this.typingTimeout = setTimeout(() => {
+                        this.sendTypingStatus(false);
+                    }, 3000);
                 }
             });
 
@@ -464,13 +646,37 @@ class FireflyChat {
                             name: user.name || user.username,
                             username: user.username,
                             profilePicture: user.profilePicture,
-                            lastRead: 0
+                            lastRead: 0,
+                            lastMessageTime: Date.now() // Set current time for new contact
                         };
                         this.addToContacts(newContact);
                         this.showNotification(`New message from ${newContact.name}`, 'info');
+
+                        // Set initial unread count to 1 for new contact
+                        if (!this.unreadCounts) this.unreadCounts = new Map();
+                        this.unreadCounts.set(senderId, 1);
+                        this.updateContactsList();
                     }
                 } catch (e) {
                     console.error('Error adding new contact:', e);
+                }
+            }
+            // Existing contact - update lastMessageTime and increment unread if not current chat
+            else if (this.contacts.has(senderId) && senderId !== this.currentUser.uid) {
+                this.updateContactLastMessageTime(senderId, Date.now());
+
+                // Increment unread count if this is NOT the currently open chat
+                if (!this.currentPeer || this.currentPeer.uid !== senderId) {
+                    if (!this.unreadCounts) this.unreadCounts = new Map();
+                    const current = this.unreadCounts.get(senderId) || 0;
+                    this.unreadCounts.set(senderId, current + 1);
+                    this.updateContactsList();
+
+                    // Show notification
+                    const contact = this.contacts.get(senderId);
+                    if (contact) {
+                        this.showNotification(`New message from ${contact.name}`, 'info');
+                    }
                 }
             }
         };
@@ -697,8 +903,25 @@ class FireflyChat {
         if (this.previousPeerId && window.messageRouter) {
             window.messageRouter.detachListener(`messages_${this.previousPeerId}`);
             window.messageRouter.detachListener(`pending_${this.previousPeerId}`);
+
+            // Detach typing listener
+            if (this.typingListenerRef) {
+                this.typingListenerRef.off();
+                this.typingListenerRef = null;
+            }
+
+            // Detach presence listener
+            if (this.presenceListenerRef) {
+                this.presenceListenerRef.off();
+                this.presenceListenerRef = null;
+            }
+
             console.log(`🔇 Detached listeners from previous peer: ${this.previousPeerId}`);
         }
+
+        // Setup listeners for new peer
+        this.setupTypingListener(peer.uid);
+        this.setupPresenceListener(peer.uid);
 
         // Listen for new messages from this peer
         if (window.messageRouter) {
@@ -712,6 +935,9 @@ class FireflyChat {
                 // Double-check the message is from the current peer
                 if (this.currentPeer && message.sender !== this.currentUser.uid) {
                     this.displayMessage(message, 'received');
+
+                    // Update lastMessageTime to move contact to top
+                    this.updateContactLastMessageTime(message.sender, message.timestamp);
                 }
             });
         }
@@ -789,6 +1015,142 @@ class FireflyChat {
         }
     }
 
+    // Send typing status to Firebase
+    sendTypingStatus(isActive, type = 'typing') {
+        if (!this.currentPeer || !window.messageRouter?.database) return;
+
+        const typingRef = window.messageRouter.database.ref(`typing/${this.currentPeer.uid}/${this.currentUser.uid}`);
+
+        if (isActive) {
+            typingRef.set({
+                timestamp: Date.now(),
+                type: type
+            });
+            // Ensure status is cleared if user disconnects/closes tab
+            typingRef.onDisconnect().remove();
+        } else {
+            typingRef.remove();
+            typingRef.onDisconnect().cancel();
+        }
+    }
+
+    // Listen for typing status from peer
+    // Listen for typing status from peer
+    setupTypingListener(peerId) {
+        if (!window.messageRouter?.database) return;
+
+        const ref = window.messageRouter.database.ref(`typing/${this.currentUser.uid}/${peerId}`);
+        this.typingListenerRef = ref;
+
+        ref.on('value', (snapshot) => {
+            const val = snapshot.val();
+            const isActive = snapshot.exists();
+
+            let type = 'typing';
+            if (val && typeof val === 'object' && val.type) {
+                type = val.type;
+            }
+
+            this.peerTypingState = { isTyping: isActive, type: type };
+            this.renderHeaderStatus();
+        });
+    }
+
+    // Presence Listener
+    setupPresenceListener(peerId) {
+        if (!window.messageRouter?.database) return;
+
+        // Initial state
+        this.peerPresenceState = { online: false, lastSeen: 0 };
+        // Reset typing state on new chat open
+        if (!this.peerTypingState) this.peerTypingState = { isTyping: false, type: 'typing' };
+
+        const ref = window.messageRouter.database.ref(`users/${peerId}/status`);
+        this.presenceListenerRef = ref;
+
+        ref.on('value', (snapshot) => {
+            const val = snapshot.val();
+            if (val) {
+                this.peerPresenceState = val;
+            } else {
+                this.peerPresenceState = { online: false, lastSeen: 0 };
+            }
+            this.renderHeaderStatus();
+        });
+    }
+
+    // Render combined status
+    renderHeaderStatus() {
+        const statusText = document.getElementById('status-text');
+        const statusDot = document.querySelector('.status-dot');
+        if (!statusText) return;
+
+        // 1. Typing/Recording Priority
+        if (this.peerTypingState && this.peerTypingState.isTyping) {
+            const type = this.peerTypingState.type;
+            if (type === 'recording') {
+                statusText.textContent = 'recording audio...';
+                statusText.style.color = '#ef4444';
+                if (statusDot) {
+                    statusDot.style.background = '#ef4444';
+                    statusDot.style.display = 'inline-block';
+                }
+            } else {
+                statusText.textContent = 'typing...';
+                statusText.style.color = '#00a884';
+                if (statusDot) {
+                    statusDot.style.background = '#00a884';
+                    statusDot.style.display = 'inline-block';
+                }
+            }
+            statusText.style.fontWeight = '600';
+            return;
+        }
+
+        // 2. Presence
+        statusText.style.color = ''; // Reset to default
+        statusText.style.fontWeight = '';
+        if (statusDot) statusDot.style.background = ''; // Reset to default CSS (green usually)
+
+        if (this.peerPresenceState && this.peerPresenceState.online) {
+            statusText.textContent = 'Online';
+            if (statusDot) statusDot.style.display = 'inline-block';
+        } else {
+            if (statusDot) statusDot.style.display = 'none'; // Hide dot if offline
+
+            if (this.peerPresenceState && this.peerPresenceState.lastSeen) {
+                statusText.textContent = this.formatLastSeen(this.peerPresenceState.lastSeen);
+            } else {
+                statusText.textContent = 'Offline';
+            }
+        }
+    }
+
+    formatLastSeen(timestamp) {
+        if (!timestamp) return 'Offline';
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diff = now - date;
+        const diffMin = Math.floor(diff / 60000);
+
+        if (diffMin < 1) return 'last seen just now';
+
+        // Same day
+        if (date.toDateString() === now.toDateString()) {
+            return 'last seen today at ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Yesterday
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        if (date.toDateString() === yesterday.toDateString()) {
+            return 'last seen yesterday at ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Older
+        return 'last seen ' + date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
     async sendMessage() {
         if (!this.currentPeer) {
             this.showNotification('No active chat', 'error');
@@ -852,6 +1214,9 @@ class FireflyChat {
             try {
                 await window.messageRouter.sendMessage(this.currentPeer.uid, message);
                 console.log('✅ Message sent');
+
+                // Update lastMessageTime to move contact to top
+                this.updateContactLastMessageTime(this.currentPeer.uid, message.timestamp);
             } catch (error) {
                 console.error('❌ Error sending message:', error);
                 this.showNotification('Failed to send message', 'error');
@@ -996,19 +1361,19 @@ class FireflyChat {
                 </div>
             </div>
             
-            <!-- Message Options Context Menu -->
-             <div class="message-options-container" style="position: relative; align-self: center; margin-left: 8px;">
+            <!-- Message Options Context Menu (Outside Bubble) -->
+            <div class="message-options-container" style="position: relative; align-self: center; margin: 0 4px;">
                  <i class="material-icons message-options-btn" onclick="toggleMessageOptions(this)" 
                     style="font-size: 16px; color: #8696a0; cursor: pointer; opacity: 0; transition: opacity 0.2s;">
                     keyboard_arrow_down
                  </i>
-                 <div class="message-options-dropdown" style="display: none; position: absolute; top: 20px; right: 0; background: #233138; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); z-index: 100; min-width: 150px; overflow: hidden; padding: 4px 0;">
+                 <div class="message-options-dropdown" style="display: none; position: absolute; top: 20px; ${type === 'sent' ? 'left: 0; transform-origin: top left;' : 'right: 0; transform-origin: top right;'} background: #233138; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); z-index: 1000; min-width: 150px; overflow: hidden; padding: 4px 0;">
                      <div class="msg-opt-item" onclick="window.handleMessageAction('${message.timestamp}', 'reply')" 
                           style="padding: 10px 16px; color: #d1d7db; cursor: pointer; display: flex; align-items: center; font-size: 14px;">
                          <i class="material-icons" style="font-size: 20px; margin-right: 12px; color: #8696a0;">reply</i> Reply
                      </div>
                      <div class="msg-opt-item" onclick="window.handleMessageAction('${message.timestamp}', 'forward')" 
-                          style="padding: 10px 16px; color: #d1d7db; cursor: pointer; display: flex; align-items: center; font-size: 14px; hover:background: #111b21;">
+                          style="padding: 10px 16px; color: #d1d7db; cursor: pointer; display: flex; align-items: center; font-size: 14px;">
                          <i class="material-icons" style="font-size: 20px; margin-right: 12px; color: #8696a0;">forward</i> Forward
                      </div>
                      <div class="msg-opt-item" onclick="navigator.clipboard.writeText('${this.escapeHtml(message.text || '')}')"
@@ -1020,7 +1385,7 @@ class FireflyChat {
                          <i class="material-icons" style="font-size: 20px; margin-right: 12px; color: #ef4444;">delete</i> Delete
                      </div>
                  </div>
-             </div>
+            </div>
         `;
 
         container.appendChild(messageDiv);
@@ -1383,6 +1748,21 @@ class FireflyChat {
         this.ensureMutualContact(user);
     }
 
+    // Update contact's lastMessageTime to move it to top of list
+    updateContactLastMessageTime(uid, timestamp) {
+        if (!uid || !this.contacts.has(uid)) return;
+
+        const contact = this.contacts.get(uid);
+        contact.lastMessageTime = timestamp;
+        this.contacts.set(uid, contact);
+
+        // Re-sort and update the UI
+        this.updateContactsList();
+
+        // Save to persist the order
+        this.saveContacts();
+    }
+
     async ensureMutualContact(peer) {
         if (!peer || !peer.uid || !this.currentUser) return;
 
@@ -1458,7 +1838,24 @@ class FireflyChat {
 
         contactsList.innerHTML = '';
 
-        this.contacts.forEach((contact, uid) => {
+        // Sort contacts: 
+        // 1. Contacts with unread messages first (sorted by most recent)
+        // 2. Then contacts without unread messages (sorted by most recent)
+        const sortedContacts = Array.from(this.contacts.entries()).sort((a, b) => {
+            const unreadA = this.unreadCounts ? (this.unreadCounts.get(a[0]) || 0) : 0;
+            const unreadB = this.unreadCounts ? (this.unreadCounts.get(b[0]) || 0) : 0;
+
+            // First priority: Unread messages (contacts with unread come first)
+            if (unreadA > 0 && unreadB === 0) return -1;
+            if (unreadB > 0 && unreadA === 0) return 1;
+
+            // Second priority: lastMessageTime (most recent first)
+            const timeA = a[1].lastMessageTime || 0;
+            const timeB = b[1].lastMessageTime || 0;
+            return timeB - timeA;
+        });
+
+        sortedContacts.forEach(([uid, contact]) => {
             const contactDiv = document.createElement('div');
             contactDiv.className = 'contact-item';
             if (this.currentPeer && this.currentPeer.uid === uid) {
@@ -1473,8 +1870,9 @@ class FireflyChat {
             const isFav = this.favourites && this.favourites.has(uid);
             const favStarHTML = isFav ? '<i class="material-icons favourite-star" style="font-size: 14px; color: #fbbf24; margin-left: 4px;">star</i>' : '';
 
-            // Set data attribute for filtering
+            // Set data attributes for filtering
             contactDiv.dataset.favorite = isFav ? 'true' : 'false';
+            contactDiv.dataset.unread = unread > 0 ? 'true' : 'false';
 
             contactDiv.innerHTML = `
                 <div class="contact-avatar">
@@ -1725,8 +2123,16 @@ class FireflyChat {
 
 
     saveContacts() {
+        // User-specific localStorage key
+        const storageKey = `chatContacts_${this.currentUser?.uid || 'unknown'}`;
         const contactsData = Array.from(this.contacts.entries());
-        localStorage.setItem('chatContacts', JSON.stringify(contactsData));
+
+        // Try to save to localStorage (may fail due to tracking prevention)
+        try {
+            localStorage.setItem(storageKey, JSON.stringify(contactsData));
+        } catch (e) {
+            console.warn('⚠️ localStorage blocked by Tracking Prevention:', e.message);
+        }
 
         // Sync with Firebase (Cloud Persistence)
         if (this.currentUser && this.currentUser.uid && window.messageRouter?.database) {
@@ -1755,8 +2161,17 @@ class FireflyChat {
     }
 
     async loadContacts() {
-        // 1. Load from LocalStorage (Fast/Offline)
-        const saved = localStorage.getItem('chatContacts');
+        // User-specific localStorage key to isolate data per user
+        const storageKey = `chatContacts_${this.currentUser?.uid || 'unknown'}`;
+
+        // 1. Load from LocalStorage (Fast/Offline) - may fail due to tracking prevention
+        let saved = null;
+        try {
+            saved = localStorage.getItem(storageKey);
+        } catch (e) {
+            console.warn('⚠️ localStorage blocked by Tracking Prevention:', e.message);
+        }
+
         if (saved) {
             try {
                 const rawContacts = JSON.parse(saved);
@@ -1790,7 +2205,7 @@ class FireflyChat {
                 // Save cleaned connection list (Update ONLY local storage to avoid loop)
                 if (this.contacts.size !== rawContacts.length) {
                     const cleaned = Array.from(this.contacts.entries());
-                    localStorage.setItem('chatContacts', JSON.stringify(cleaned));
+                    localStorage.setItem(storageKey, JSON.stringify(cleaned));
                     console.log('🧹 cleanup: Removed duplicate/invalid contacts');
                 }
 
@@ -1825,9 +2240,9 @@ class FireflyChat {
                     if (updated) {
                         console.log('☁️ Synced contacts from Firebase');
                         this.updateContactsList();
-                        // Save merged list to local storage
+                        // Save merged list to local storage (user-specific key)
                         const contactsData = Array.from(this.contacts.entries());
-                        localStorage.setItem('chatContacts', JSON.stringify(contactsData));
+                        localStorage.setItem(storageKey, JSON.stringify(contactsData));
                     }
                 }
             } catch (e) {
@@ -1889,9 +2304,11 @@ class FireflyChat {
         const status = document.getElementById('connection-status');
         if (status) {
             status.innerHTML = `
-                <span class="status-dot"></span>
-                <span>Chatting with ${peer.name || peer.username}</span>
+                <span class="status-dot" style="display:none"></span>
+                <span id="status-text">...</span>
             `;
+            // Immediately attempt to render current status if available
+            this.renderHeaderStatus();
         }
 
         console.log(`🔄 Updated UI for current peer: ${peer.name}`);
@@ -4075,28 +4492,47 @@ if (typeof FireflyChat !== 'undefined') {
             </div>
         `;
 
+        // Determine menu anchor style
+        const menuAnchorStyle = type === 'sent' ? 'left: 0;' : 'right: 0;';
+
         messageDiv.innerHTML = `
-            <div class="message-avatar">
-                <img src="${avatarSrc}" alt="Avatar">
-            </div>
             <div class="message-content">
                 <div class="message-bubble audio-message">
-                    ${bubbleInner}
+                    <div class="audio-bubble-inner" style="display: flex; align-items: center; gap: 12px;">
+                         <div class="audio-avatar-wrapper" style="width: 48px; height: 48px; flex-shrink: 0; position: relative; z-index: 2;">
+                             <img src="${avatarSrc}" class="audio-msg-avatar" alt="Avatar" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;">
+                             <div class="audio-mic-badge"><i class="material-icons" style="font-size: 14px;">mic</i></div>
+                         </div>
+                         <div class="audio-player-controls" style="flex: 1; min-width: 0;">
+                             <div class="audio-top-row">
+                                 <div class="audio-play-btn" onclick="window.playAudioMessage(this, '${message.timestamp}')">
+                                     <i class="material-icons">play_arrow</i>
+                                 </div>
+                                 <div class="audio-waveform-static">
+                                     ${waveformHTML}
+                                 </div>
+                             </div>
+                             <div class="audio-meta-row">
+                                 <span class="audio-duration">${message.duration || '0:00'}</span>
+                                 <span class="audio-time">${timeStr}</span>
+                             </div>
+                         </div>
+                    </div>
                 </div>
             </div>
-             <div class="message-options-container" style="position: relative; align-self: center; margin-left: 4px;">
+             <div class="message-options-container" style="position: relative; align-self: center; margin: 0 4px;">
                  <i class="material-icons message-options-btn" onclick="toggleMessageOptions(this)" 
                     style="font-size: 16px; color: #8696a0; cursor: pointer; opacity: 0; transition: opacity 0.2s;">
                     keyboard_arrow_down
                  </i>
-                 <div class="message-options-dropdown" style="display: none; position: absolute; top: 20px; right: 0; background: #233138; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); z-index: 100; min-width: 150px; overflow: hidden; padding: 4px 0;">
+                 <div class="message-options-dropdown" style="display: none; position: absolute; top: 20px; ${menuAnchorStyle} background: #233138; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); z-index: 10000; min-width: 150px; overflow: hidden; padding: 4px 0;">
                      <div class="msg-opt-item" onclick="window.handleMessageAction('${message.timestamp}', 'reply')"
                           style="padding: 10px 16px; color: #d1d7db; cursor: pointer; display: flex; align-items: center; font-size: 14px;">
-                         <i class="material-icons" style="font-size: 20px; margin-right: 12px; color: #8696a0;">reply</i> Reply
+                          <i class="material-icons" style="font-size: 20px; margin-right: 12px; color: #8696a0;">reply</i> Reply
                      </div>
                      <div class="msg-opt-item" onclick="window.handleMessageAction('${message.timestamp}', 'delete')"
                           style="padding: 10px 16px; color: #ef4444; cursor: pointer; display: flex; align-items: center; font-size: 14px;">
-                         <i class="material-icons" style="font-size: 20px; margin-right: 12px; color: #ef4444;">delete</i> Delete
+                          <i class="material-icons" style="font-size: 20px; margin-right: 12px; color: #ef4444;">delete</i> Delete
                      </div>
                  </div>
              </div>

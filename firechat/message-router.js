@@ -401,16 +401,37 @@ class MessageRouter {
         }
     }
 
-    async updateOnlineStatus(online) {
+    updateOnlineStatus(online) {
         if (!this.database || !this.currentUserId) return;
 
-        try {
-            await this.database.ref(`users/${this.currentUserId}/status`).set({
-                online: online,
-                lastSeen: Date.now()
+        const statusRef = this.database.ref(`users/${this.currentUserId}/status`);
+        const connectedRef = this.database.ref('.info/connected');
+
+        if (online) {
+            connectedRef.on('value', (snap) => {
+                if (snap.val() === true) {
+                    // We're connected (or reconnected)!
+
+                    // 1. Set online immediately
+                    statusRef.set({
+                        online: true,
+                        lastSeen: Date.now() // Local time, or use ServerValue.TIMESTAMP
+                    });
+
+                    // 2. Queue the offline update
+                    statusRef.onDisconnect().update({
+                        online: false,
+                        lastSeen: firebase.database.ServerValue.TIMESTAMP
+                    });
+                }
             });
-        } catch (error) {
-            console.error('Error updating online status:', error);
+        } else {
+            // Manual offline (logout)
+            statusRef.update({
+                online: false,
+                lastSeen: firebase.database.ServerValue.TIMESTAMP
+            });
+            connectedRef.off();
         }
     }
 

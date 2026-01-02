@@ -147,28 +147,51 @@ body {
     /* Back Button Styling */
     .mobile-back-btn {
         display: flex !important;
-        margin-right: 8px;
+        margin-right: 0 !important;
         padding: 8px;
         border-radius: 50%;
         cursor: pointer;
         color: var(--text-secondary);
+        margin-left: -4px;
+        /* Slight pull left */
     }
 
     .mobile-back-btn:active {
         background: rgba(255, 255, 255, 0.1);
     }
 
-    /* Adjust Header for Back Button */
     /* Adjust Header for Back Button & Spacing */
-    .header-title>div {
-        gap: 0px !important;
-        /* Reduce gap between arrow and avatar */
+    #chat-main-header {
+        padding: 0 8px !important;
+        /* Reduce padding on mobile */
+        gap: 8px;
+        /* Gap between title area and actions */
+    }
+
+    .header-content-wrapper {
+        gap: 4px !important;
+        /* Tight gap between Back, Avatar, Text */
     }
 
     #chat-header-avatar {
-        margin-left: -5px;
-        /* Pull avatar closer to arrow */
-        margin-right: 8px;
+        margin: 0 !important;
+        width: 38px !important;
+        height: 38px !important;
+    }
+
+    .header-text-info {
+        margin-left: 8px;
+        /* Space between avatar and text */
+        flex: 1;
+        min-width: 0;
+    }
+
+    .header-text-info h1 {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 15px !important;
+        /* Slightly smaller on mobile if needed */
     }
 
     /* Header Actions: Space efficiently */
