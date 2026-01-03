@@ -1455,7 +1455,7 @@ gap: 8px;
             <div class="message-avatar">
                 <img src="${avatarSrc}" alt="Avatar">
             </div>
-            <div class="message-content">
+            <div class="message-content" data-timestamp="${message.timestamp}">
                 <div class="message-bubble">
                     ${replyContextHTML}
                     ${linkPreviewHTML}
@@ -1759,7 +1759,7 @@ gap: 8px;
             <div class="message-avatar">
                 <img src="${avatarSrc}" alt="Avatar">
             </div>
-            <div class="message-content">
+            <div class="message-content" data-timestamp="${message.timestamp}">
                 <div class="message-bubble image-message">
                     <!-- Message Options inside bubble -->
                     <div class="message-options-container" style="position: absolute; top: 8px; right: 8px; z-index: 10;">
@@ -1836,7 +1836,7 @@ gap: 8px;
             <div class="message-avatar">
                 <img src="${avatarSrc}" alt="Avatar">
             </div>
-            <div class="message-content">
+            <div class="message-content" data-timestamp="${message.timestamp}">
                 <div class="message-bubble image-message">
                     ${message.replyContext ? `
                     <div class="reply-context" style="margin-bottom: 6px;">
@@ -4726,7 +4726,7 @@ if (typeof FireflyChat !== 'undefined') {
         const menuAnchorStyle = type === 'sent' ? 'left: 0;' : 'right: 0;';
 
         messageDiv.innerHTML = `
-            <div class="message-content">
+            <div class="message-content" data-timestamp="${message.timestamp}">
                 <div class="message-bubble audio-message">
                     <div class="audio-bubble-inner" style="display: flex; align-items: center; gap: 12px;">
                          <div class="audio-avatar-wrapper" style="width: 48px; height: 48px; flex-shrink: 0; position: relative; z-index: 2;">
