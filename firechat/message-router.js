@@ -35,7 +35,7 @@ class MessageRouter {
 
             const messageData = {
                 ...message,
-                timestamp: Date.now(),
+                timestamp: message.timestamp || Date.now(),
                 read: false,
                 delivered: false,
                 sender: this.currentUserId
@@ -57,12 +57,63 @@ class MessageRouter {
                 await this.database.ref(`messages/${this.currentUserId}/${recipientId}`).push().set(messageData);
             }
 
-            return { success: true, messageId: messageRef.key, isPermanent: usePermanent };
+            // Listen for delivery confirmation (when recipient removes from pending)
+            this.listenForDelivery(recipientId, messageRef.key, messageData.timestamp);
+
+            return { success: true, messageId: messageRef.key, isPermanent: usePermanent, timestamp: messageData.timestamp };
         } catch (error) {
             console.error('Error sending message:', error);
             return { success: false, error: error.message };
         }
     }
+
+    /**
+     * Listen for delivery confirmation when pending message is removed
+     */
+    listenForDelivery(recipientId, messageId, timestamp) {
+        const pendingPath = `pending_messages/${recipientId}/${this.currentUserId}/${messageId}`;
+        const pendingRef = this.database.ref(pendingPath);
+
+        // Small delay to ensure message is written first
+        setTimeout(() => {
+            // First check if message exists (it should since we just wrote it)
+            pendingRef.once('value').then((snapshot) => {
+                if (snapshot.exists()) {
+                    console.log(`📨 Message ${messageId} is pending delivery, waiting for confirmation...`);
+
+                    // Now set up listener for when it gets removed
+                    const listener = pendingRef.on('value', (snap) => {
+                        if (!snap.exists()) {
+                            // Message was removed = delivered!
+                            console.log(`✅ Message ${messageId} delivered to ${recipientId}`);
+
+                            // Update UI to show "delivered" status
+                            if (window.fireflyChat && window.fireflyChat.updateMessageStatusIcon) {
+                                window.fireflyChat.updateMessageStatusIcon(timestamp, 'delivered');
+                            }
+
+                            // Clean up listener
+                            pendingRef.off('value', listener);
+                        }
+                    });
+
+                    // Timeout to stop listening after 5 minutes
+                    setTimeout(() => {
+                        pendingRef.off('value', listener);
+                    }, 5 * 60 * 1000);
+                } else {
+                    // Message doesn't exist - might have been delivered already instantly
+                    console.log(`⚠️ Message ${messageId} not found in pending - may be delivered instantly`);
+                    // Mark as delivered anyway since recipient might have gotten it very fast
+                    if (window.fireflyChat && window.fireflyChat.updateMessageStatusIcon) {
+                        window.fireflyChat.updateMessageStatusIcon(timestamp, 'delivered');
+                    }
+                }
+            });
+        }, 300); // 300ms delay to ensure write completes
+    }
+
+
 
     // Fetch pending messages and confirm delivery
     async fetchPendingMessages(peerId) {
@@ -152,8 +203,17 @@ class MessageRouter {
                 this.saveMessageLocally(senderId, message);
                 callback(message);
 
-                // Confirm delivery (move from pending)
-                await this.confirmDelivery(senderId, [message]);
+                // Only confirm delivery if user is CURRENTLY viewing this chat
+                // This prevents double-tick showing when user is just in contacts list
+                const isViewingThisChat = window.fireflyChat &&
+                    window.fireflyChat.currentPeer &&
+                    window.fireflyChat.currentPeer.uid === senderId;
+
+                if (isViewingThisChat) {
+                    await this.confirmDelivery(senderId, [message]);
+                } else {
+                    console.log(`📬 Message from ${senderId} received but not viewing chat - delivery not confirmed yet`);
+                }
             }
         });
 

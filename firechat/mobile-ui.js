@@ -139,6 +139,11 @@ console.log('📱 Mobile UI Module Loaded');
         document.body.classList.remove('mobile-chat-active');
         // Clear active chat selection visuals in list
         document.querySelectorAll('.contact-item').forEach(c => c.classList.remove('active'));
+
+        // Close Active Chat in backend to stop delivery receipts
+        if (window.fireflyChat && typeof window.fireflyChat.closeActiveChat === 'function') {
+            window.fireflyChat.closeActiveChat();
+        }
     };
 
     // Hook into existing interaction - Single Click Fix

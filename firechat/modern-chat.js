@@ -650,33 +650,9 @@ class FireflyChat {
                             lastMessageTime: Date.now() // Set current time for new contact
                         };
                         this.addToContacts(newContact);
-                        this.showNotification(`New message from ${newContact.name}`, 'info');
-
-                        // Set initial unread count to 1 for new contact
-                        if (!this.unreadCounts) this.unreadCounts = new Map();
-                        this.unreadCounts.set(senderId, 1);
-                        this.updateContactsList();
                     }
                 } catch (e) {
                     console.error('Error adding new contact:', e);
-                }
-            }
-            // Existing contact - update lastMessageTime and increment unread if not current chat
-            else if (this.contacts.has(senderId) && senderId !== this.currentUser.uid) {
-                this.updateContactLastMessageTime(senderId, Date.now());
-
-                // Increment unread count if this is NOT the currently open chat
-                if (!this.currentPeer || this.currentPeer.uid !== senderId) {
-                    if (!this.unreadCounts) this.unreadCounts = new Map();
-                    const current = this.unreadCounts.get(senderId) || 0;
-                    this.unreadCounts.set(senderId, current + 1);
-                    this.updateContactsList();
-
-                    // Show notification
-                    const contact = this.contacts.get(senderId);
-                    if (contact) {
-                        this.showNotification(`New message from ${contact.name}`, 'info');
-                    }
                 }
             }
         };
@@ -741,7 +717,7 @@ class FireflyChat {
                     this.openChatWithPeer(foundUser);
                     this.addToContacts(foundUser);
                     usernameInput.value = '';
-                    this.showNotification(`Connected with ${foundUser.name || foundUser.username}`, 'success');
+                    this.showNotification(`Connected with ${foundUser.name || foundUser.username} `, 'success');
                     console.log('✅ Connected to:', foundUser.name);
                 } else {
                     this.showNotification(`User "${username}" not found`, 'error');
@@ -865,7 +841,7 @@ class FireflyChat {
                             thumb.className = 'media-thumb';
                             // Use msg.image for image type, msg.content for GIFs
                             const mediaSrc = msg.image || msg.content;
-                            thumb.innerHTML = `<img src="${mediaSrc}" alt="media" style="width:100%; height:100%; object-fit:cover;">`;
+                            thumb.innerHTML = `< img src = "${mediaSrc}" alt = "media" style = "width:100%; height:100%; object-fit:cover;" > `;
                             thumb.onclick = () => {
                                 // Use image preview modal
                                 if (typeof openImagePreview === 'function') {
@@ -901,8 +877,8 @@ class FireflyChat {
 
         // Detach listeners from previous chat if any
         if (this.previousPeerId && window.messageRouter) {
-            window.messageRouter.detachListener(`messages_${this.previousPeerId}`);
-            window.messageRouter.detachListener(`pending_${this.previousPeerId}`);
+            window.messageRouter.detachListener(`messages_${this.previousPeerId} `);
+            window.messageRouter.detachListener(`pending_${this.previousPeerId} `);
 
             // Detach typing listener
             if (this.typingListenerRef) {
@@ -916,7 +892,7 @@ class FireflyChat {
                 this.presenceListenerRef = null;
             }
 
-            console.log(`🔇 Detached listeners from previous peer: ${this.previousPeerId}`);
+            console.log(`🔇 Detached listeners from previous peer: ${this.previousPeerId} `);
         }
 
         // Setup listeners for new peer
@@ -963,18 +939,18 @@ class FireflyChat {
                 notif.id = 'blocked-notification';
                 notif.className = 'blocked-notification';
                 notif.style.cssText = `
-                    padding: 15px;
-                    text-align: center;
-                    background: var(--bg-secondary);
-                    color: var(--text-secondary);
-                    font-size: 14px;
-                    cursor: pointer;
-                    border-top: 1px solid var(--border-color);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 8px;
-                `;
+padding: 15px;
+text - align: center;
+background: var(--bg - secondary);
+color: var(--text - secondary);
+font - size: 14px;
+cursor: pointer;
+border - top: 1px solid var(--border - color);
+display: flex;
+align - items: center;
+justify - content: center;
+gap: 8px;
+`;
                 notif.innerHTML = '<span>You blocked this contact. Tap to unblock.</span>';
 
                 notif.onclick = () => {
@@ -1019,7 +995,7 @@ class FireflyChat {
     sendTypingStatus(isActive, type = 'typing') {
         if (!this.currentPeer || !window.messageRouter?.database) return;
 
-        const typingRef = window.messageRouter.database.ref(`typing/${this.currentPeer.uid}/${this.currentUser.uid}`);
+        const typingRef = window.messageRouter.database.ref(`typing / ${this.currentPeer.uid}/${this.currentUser.uid}`);
 
         if (isActive) {
             typingRef.set({
@@ -1179,7 +1155,8 @@ class FireflyChat {
             type: 'text',
             timestamp: Date.now(),
             sender: this.currentUser.uid,
-            senderName: this.currentUser.name || this.currentUser.username || 'User'
+            senderName: this.currentUser.name || this.currentUser.username || 'User',
+            status: 'sending' // Track message status
         };
 
         // Attach Reply Context
@@ -1200,29 +1177,155 @@ class FireflyChat {
             window.currentLinkMeta = null;
         }
 
-        // Display immediately
+        // Display immediately (optimistic UI)
         this.displayMessage(message, 'sent');
 
-        // Clear input
+        // Clear input immediately for faster perceived response
         messageInput.value = '';
         messageInput.style.height = 'auto';
         if (typeof this.updateInputButtons === 'function') this.updateInputButtons(); // Restore Mic Button
         if (window.clearUrlPreview) window.clearUrlPreview();
 
-        // Send via Firebase
+        // Send via Firebase with status tracking
         if (window.messageRouter) {
             try {
-                await window.messageRouter.sendMessage(this.currentPeer.uid, message);
-                console.log('✅ Message sent');
+                const result = await window.messageRouter.sendMessage(this.currentPeer.uid, message);
 
-                // Update lastMessageTime to move contact to top
-                this.updateContactLastMessageTime(this.currentPeer.uid, message.timestamp);
+                if (result && result.success) {
+                    console.log('✅ Message sent');
+                    // Update status icon to "sent"
+                    this.updateMessageStatusIcon(message.timestamp, 'sent');
+
+                    // Update lastMessageTime to move contact to top
+                    this.updateContactLastMessageTime(this.currentPeer.uid, message.timestamp);
+                } else {
+                    throw new Error('Send failed');
+                }
             } catch (error) {
                 console.error('❌ Error sending message:', error);
-                this.showNotification('Failed to send message', 'error');
+                // Update status icon to "failed"
+                this.updateMessageStatusIcon(message.timestamp, 'failed');
+                this.showNotification('Failed to send. Tap to retry.', 'error');
             }
         }
     }
+
+    /**
+     * Update message status icon in UI
+     */
+    updateMessageStatusIcon(timestamp, status) {
+        const statusIcon = document.querySelector(`.message-status-icon[data-timestamp="${timestamp}"]`);
+        if (!statusIcon) return;
+
+        switch (status) {
+            case 'sending':
+                statusIcon.innerHTML = '<i class="material-icons" style="font-size: 14px; color: #8696a0; vertical-align: middle; margin-left: 2px; animation: pulse 1s infinite;">schedule</i>';
+                statusIcon.title = 'Sending...';
+                break;
+            case 'sent':
+                statusIcon.innerHTML = '<i class="material-icons" style="font-size: 14px; color: #8696a0; vertical-align: middle; margin-left: 2px;">done</i>';
+                statusIcon.title = 'Sent';
+                statusIcon.style.animation = 'none';
+                break;
+            case 'delivered':
+                statusIcon.innerHTML = '<i class="material-icons" style="font-size: 14px; color: #53bdeb; vertical-align: middle; margin-left: 2px;">done_all</i>';
+                statusIcon.title = 'Delivered';
+                break;
+            case 'read':
+                statusIcon.innerHTML = '<i class="material-icons" style="font-size: 14px; color: #53bdeb; vertical-align: middle; margin-left: 2px;">done_all</i>';
+                statusIcon.title = 'Read';
+                break;
+            case 'failed':
+                statusIcon.innerHTML = '<i class="material-icons" style="font-size: 14px; color: #ef4444; vertical-align: middle; margin-left: 2px; cursor: pointer;" onclick="window.fireflyChat.retryMessage(' + timestamp + ')">error_outline</i>';
+                statusIcon.title = 'Failed - Click to retry';
+                break;
+        }
+    }
+
+    /**
+     * Retry a failed message
+     */
+    retryMessage(timestamp) {
+        const message = window.messageRegistry[timestamp];
+        if (message && this.currentPeer) {
+            this.updateMessageStatusIcon(timestamp, 'sending');
+
+            window.messageRouter.sendMessage(this.currentPeer.uid, message)
+                .then(result => {
+                    if (result && result.success) {
+                        this.updateMessageStatusIcon(timestamp, 'sent');
+                        this.showNotification('Message sent', 'success');
+                    } else {
+                        throw new Error('Retry failed');
+                    }
+                })
+                .catch(() => {
+                    this.updateMessageStatusIcon(timestamp, 'failed');
+                    this.showNotification('Still failed. Check connection.', 'error');
+                });
+        }
+    }
+
+
+    /**
+     * Get the HTML for message status icon based on message state
+     */
+    getStatusIconHTML(message) {
+        const timestamp = message.timestamp;
+
+        // Determine status from message properties
+        let status = 'sending';
+
+        if (message.delivered === true) {
+            status = 'delivered';
+        } else if (message.status === 'sent' || (message.id && !message.status)) {
+            // Has an ID (from Firebase) means it was sent successfully
+            // Or if it's loaded from history without explicit status, assume sent
+            status = 'sent';
+        } else if (message.status === 'failed') {
+            status = 'failed';
+        } else if (message.status === 'delivered') {
+            status = 'delivered';
+        } else if (message.status === 'read') {
+            status = 'read';
+        } else if (message.status === 'sending') {
+            status = 'sending';
+        }
+
+        // If message is from history (older than 10 seconds), assume delivered
+        const isHistoryMessage = (Date.now() - timestamp) > 10000;
+        if (isHistoryMessage && status === 'sending') {
+            status = 'delivered';
+        }
+
+        switch (status) {
+            case 'sending':
+                return `<span class="message-status-icon" data-timestamp="${timestamp}" title="Sending...">
+                    <i class="material-icons" style="font-size: 14px; color: #8696a0; vertical-align: middle; margin-left: 2px; animation: pulse 1s infinite;">schedule</i>
+                </span>`;
+            case 'sent':
+                return `<span class="message-status-icon" data-timestamp="${timestamp}" title="Sent">
+                    <i class="material-icons" style="font-size: 14px; color: #8696a0; vertical-align: middle; margin-left: 2px;">done</i>
+                </span>`;
+            case 'delivered':
+                return `<span class="message-status-icon" data-timestamp="${timestamp}" title="Delivered">
+                    <i class="material-icons" style="font-size: 14px; color: #53bdeb; vertical-align: middle; margin-left: 2px;">done_all</i>
+                </span>`;
+            case 'read':
+                return `<span class="message-status-icon" data-timestamp="${timestamp}" title="Read">
+                    <i class="material-icons" style="font-size: 14px; color: #53bdeb; vertical-align: middle; margin-left: 2px;">done_all</i>
+                </span>`;
+            case 'failed':
+                return `<span class="message-status-icon" data-timestamp="${timestamp}" title="Failed - Click to retry">
+                    <i class="material-icons" style="font-size: 14px; color: #ef4444; vertical-align: middle; margin-left: 2px; cursor: pointer;" onclick="window.fireflyChat.retryMessage(${timestamp})">error_outline</i>
+                </span>`;
+            default:
+                return `<span class="message-status-icon" data-timestamp="${timestamp}" title="Sent">
+                    <i class="material-icons" style="font-size: 14px; color: #8696a0; vertical-align: middle; margin-left: 2px;">done</i>
+                </span>`;
+        }
+    }
+
 
     displayMessage(message, type = 'received') {
         // Check if it's an image message
@@ -1357,7 +1460,10 @@ class FireflyChat {
                     ${replyContextHTML}
                     ${linkPreviewHTML}
                     <div class="message-text" style="white-space: pre-wrap;">${msgContent}</div>
-                    <div class="message-time">${timeStr}</div>
+                    <div class="message-time">
+                        ${timeStr}
+                        ${type === 'sent' ? this.getStatusIconHTML(message) : ''}
+                    </div>
                 </div>
             </div>
             
@@ -1491,12 +1597,74 @@ class FireflyChat {
         this.showLoading(true);
 
         try {
+            // Get current connection quality for adaptive compression
+            const connectionQuality = window.messageQueue?.getConnectionQuality()?.quality || 'good';
+            console.log(`📸 Sending image with connection quality: ${connectionQuality}`);
+
+            // Use ImageOptimizer if available, otherwise fallback to basic compression
+            let compressed, width, height;
+
+            if (window.ImageOptimizer) {
+                const result = await window.ImageOptimizer.compressForConnection(file, connectionQuality);
+                compressed = result.dataUrl;
+                width = result.width;
+                height = result.height;
+            } else {
+                // Fallback to basic compression
+                compressed = await this.basicImageCompress(file, connectionQuality);
+            }
+
+            const message = {
+                type: 'image',
+                image: compressed,
+                timestamp: Date.now(),
+                sender: this.currentUser.uid,
+                senderName: this.currentUser.name || this.currentUser.username || 'User',
+                status: 'sending'
+            };
+
+            // Display immediately (optimistic UI)
+            this.displayImageMessage(message, 'sent');
+            this.showLoading(false);
+
+            // Send via Firebase with status tracking
+            if (window.messageRouter) {
+                try {
+                    const result = await window.messageRouter.sendMessage(this.currentPeer.uid, message);
+
+                    if (result && result.success) {
+                        console.log('✅ Image sent');
+                        this.updateMessageStatusIcon(message.timestamp, 'sent');
+                        this.updateContactLastMessageTime(this.currentPeer.uid, message.timestamp);
+                    } else {
+                        throw new Error('Send failed');
+                    }
+                } catch (sendError) {
+                    console.error('❌ Error sending image:', sendError);
+                    this.updateMessageStatusIcon(message.timestamp, 'failed');
+                    this.showNotification('Image failed to send. Tap to retry.', 'error');
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error processing image:', error);
+            this.showNotification('Failed to process image', 'error');
+            this.showLoading(false);
+        }
+    }
+
+    /**
+     * Fallback basic image compression
+     */
+    async basicImageCompress(file, quality = 'good') {
+        return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload = async (e) => {
+            reader.onload = (e) => {
                 const img = new Image();
-                img.onload = async () => {
-                    // Compress image
-                    const maxSize = 1024;
+                img.onload = () => {
+                    // Adjust size based on connection quality
+                    let maxSize = quality === 'slow' ? 600 : 1024;
+                    let jpegQuality = quality === 'slow' ? 0.5 : 0.7;
+
                     let width = img.width;
                     let height = img.height;
 
@@ -1516,34 +1684,16 @@ class FireflyChat {
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    const compressed = canvas.toDataURL('image/jpeg', 0.7);
-
-                    const message = {
-                        type: 'image',
-                        image: compressed,
-                        timestamp: Date.now(),
-                        sender: this.currentUser.uid,
-                        senderName: this.currentUser.name || this.currentUser.username || 'User'
-                    };
-
-                    // Display and send
-                    this.displayImageMessage(message, 'sent');
-
-                    if (window.messageRouter) {
-                        await window.messageRouter.sendMessage(this.currentPeer.uid, message);
-                    }
-
-                    this.showLoading(false);
+                    resolve(canvas.toDataURL('image/jpeg', jpegQuality));
                 };
+                img.onerror = reject;
                 img.src = e.target.result;
             };
+            reader.onerror = reject;
             reader.readAsDataURL(file);
-        } catch (error) {
-            console.error('❌ Error sending image:', error);
-            this.showNotification('Failed to send image', 'error');
-            this.showLoading(false);
-        }
+        });
     }
+
 
     async sendGifMessage(gifUrl) {
         if (!this.currentPeer) {
@@ -1556,20 +1706,29 @@ class FireflyChat {
             content: gifUrl,
             timestamp: Date.now(),
             sender: this.currentUser.uid,
-            senderName: this.currentUser.name || this.currentUser.username || 'User'
+            senderName: this.currentUser.name || this.currentUser.username || 'User',
+            status: 'sending'
         };
 
         // Display GIF message immediately
         this.displayGifMessage(message, 'sent');
 
-        // Send via Firebase
+        // Send via Firebase with status tracking
         if (window.messageRouter) {
             try {
-                await window.messageRouter.sendMessage(this.currentPeer.uid, message);
-                console.log('✅ GIF sent');
+                const result = await window.messageRouter.sendMessage(this.currentPeer.uid, message);
+
+                if (result && result.success) {
+                    console.log('✅ GIF sent');
+                    this.updateMessageStatusIcon(message.timestamp, 'sent');
+                    this.updateContactLastMessageTime(this.currentPeer.uid, message.timestamp);
+                } else {
+                    throw new Error('Send failed');
+                }
             } catch (error) {
                 console.error('❌ Error sending GIF:', error);
-                this.showNotification('Failed to send GIF', 'error');
+                this.updateMessageStatusIcon(message.timestamp, 'failed');
+                this.showNotification('GIF failed to send. Tap to retry.', 'error');
             }
         }
     }
@@ -1637,7 +1796,10 @@ class FireflyChat {
                              </svg>
                         </div>
                     </div>
-                    <div class="message-time">${timeStr}</div>
+                    <div class="message-time">
+                        ${timeStr}
+                        ${type === 'sent' ? this.getStatusIconHTML(message) : ''}
+                    </div>
                 </div>
             </div>
         `;
@@ -1726,7 +1888,10 @@ class FireflyChat {
                     </div>
 
                     ${message.text ? `<div class="image-caption-text">${this.escapeHtml(message.text)}</div>` : ''}
-                    <div class="message-time">${timeStr}</div>
+                    <div class="message-time">
+                        ${timeStr}
+                        ${type === 'sent' ? this.getStatusIconHTML(message) : ''}
+                    </div>
                 </div>
             </div>
         `;
@@ -1933,9 +2098,20 @@ class FireflyChat {
 
         this.unreadListeners.add(uid);
 
+        if (!this.processedUnreadMessages) this.processedUnreadMessages = new Set();
+
         const handleUnread = (snapshot) => {
             const msg = snapshot.val();
             if (!msg) return;
+
+            // Deduplication: prevent counting same message from multiple paths (pending -> messages)
+            // Use timestamp as unique identifier for the message
+            if (msg.timestamp) {
+                const dupKey = `${uid}_${msg.timestamp}`;
+                if (this.processedUnreadMessages.has(dupKey)) return;
+
+                this.processedUnreadMessages.add(dupKey);
+            }
 
             const contact = this.contacts.get(uid);
             const threshold = contact?.lastRead || this.appLoadTime;
@@ -1943,14 +2119,30 @@ class FireflyChat {
             if (msg.timestamp > threshold &&
                 (!this.currentPeer || this.currentPeer.uid !== uid)) {
 
+                // Deduplication check passed
                 const current = this.unreadCounts.get(uid) || 0;
                 this.unreadCounts.set(uid, current + 1);
+
+                // Also update last message time
+                this.updateContactLastMessageTime(uid, msg.timestamp);
+
                 this.updateContactsList();
+
+                // Show notification if it's a new message since app load
+                // (Threshold check helps, but we can also check against a strictly newer time if needed)
+                if (window.fireflyChat && typeof window.fireflyChat.showNotification === 'function') {
+                    // Get sender name
+                    const senderName = contact.name || contact.username || 'User';
+                    // Throttle notifications?
+                    window.fireflyChat.showNotification(`New message from ${senderName}`, 'info');
+                }
             }
         };
 
         window.messageRouter.database.ref(`messages/${this.currentUser.uid}/${uid}`).limitToLast(1).on('child_added', handleUnread);
         window.messageRouter.database.ref(`temp_messages/${this.currentUser.uid}/${uid}`).limitToLast(1).on('child_added', handleUnread);
+        // Also listen on pending_messages for unread count (messages not yet confirmed as delivered)
+        window.messageRouter.database.ref(`pending_messages/${this.currentUser.uid}/${uid}`).limitToLast(1).on('child_added', handleUnread);
     }
 
     // Context Menu Handling
@@ -2654,6 +2846,44 @@ class FireflyChat {
             console.error('Error deleting chat:', error);
             this.showNotification('Failed to delete chat', 'error');
         }
+    }
+
+    /**
+     * Close the currently active chat
+     * Detaches listeners and clears state
+     */
+    closeActiveChat() {
+        if (!this.currentPeer) return;
+
+        console.log('🔌 Closing active chat with:', this.currentPeer.name);
+
+        // Detach listeners
+        if (window.messageRouter) {
+            window.messageRouter.detachListener(`messages_${this.currentPeer.uid}`);
+            window.messageRouter.detachListener(`pending_${this.currentPeer.uid}`);
+
+            // Note: We don't detach typing/presence listeners usually? 
+            // openChatWithPeer detaches "typingListenerRef" stored in this.
+
+            if (this.typingListenerRef) {
+                this.typingListenerRef.off();
+                this.typingListenerRef = null;
+            }
+
+            if (this.presenceListenerRef) {
+                this.presenceListenerRef.off();
+                this.presenceListenerRef = null;
+            }
+        }
+
+        // Clear state
+        this.previousPeerId = null; // Important so next open doesn't try to detach again relative to this
+        this.currentPeer = null;
+        this.isConnected = false;
+
+        // Update Status to Default
+        const status = document.getElementById('connection-status');
+        if (status) status.innerHTML = '<span class="status-dot"></span><span>Select a contact to chat</span>';
     }
 
     // ==================== FAVOURITES ====================
@@ -4514,7 +4744,7 @@ if (typeof FireflyChat !== 'undefined') {
                              </div>
                              <div class="audio-meta-row">
                                  <span class="audio-duration">${message.duration || '0:00'}</span>
-                                 <span class="audio-time">${timeStr}</span>
+                                 <span class="audio-time">${timeStr}${type === 'sent' ? this.getStatusIconHTML(message) : ''}</span>
                              </div>
                          </div>
                     </div>
@@ -4551,18 +4781,27 @@ if (typeof FireflyChat !== 'undefined') {
             duration: duration,
             timestamp: Date.now(),
             sender: this.currentUser.uid,
-            senderName: this.currentUser.name || 'User'
+            senderName: this.currentUser.name || 'User',
+            status: 'sending'
         };
 
         this.displayAudioMessage(message, 'sent');
 
         if (window.messageRouter) {
             try {
-                await window.messageRouter.sendMessage(this.currentPeer.uid, message);
-                console.log('✅ Audio Message sent');
+                const result = await window.messageRouter.sendMessage(this.currentPeer.uid, message);
+
+                if (result && result.success) {
+                    console.log('✅ Audio Message sent');
+                    this.updateMessageStatusIcon(message.timestamp, 'sent');
+                    this.updateContactLastMessageTime(this.currentPeer.uid, message.timestamp);
+                } else {
+                    throw new Error('Send failed');
+                }
             } catch (error) {
                 console.error('❌ Error sending audio:', error);
-                this.showNotification('Failed to send audio', 'error');
+                this.updateMessageStatusIcon(message.timestamp, 'failed');
+                this.showNotification('Failed to send audio. Tap to retry.', 'error');
             }
         }
     };

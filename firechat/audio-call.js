@@ -19,7 +19,7 @@
             this.localStream = null;
             this.peerConnection = null;
             this.callPopup = null;
-            this.callState = 'idle'; // idle, calling, ringing, connected, ended
+            this.callState = 'idle'; // idle, calling, ringing, connected, reconnecting, ended
             this.callTimer = null;
             this.callDuration = 0;
             this.isMuted = false;
@@ -27,6 +27,16 @@
             this.currentPeer = null;
             this.callId = null;
             this.isInitiator = false;
+
+            // Connection health monitoring
+            this.isReconnecting = false;
+            this.reconnectAttempts = 0;
+            this.maxReconnectAttempts = 5;
+            this.lastAudioActivity = Date.now();
+            this.audioActivityChecker = null;
+            this.audioActivityTimeout = 5000; // 5 seconds without audio = reconnecting
+            this.pausedDuration = 0; // Timer state when paused
+            this.connectionQuality = 'good'; // good, slow, poor
 
             // STUN/TURN servers for WebRTC
             this.iceServers = {
@@ -46,6 +56,63 @@
 
             // Make startAudioCall globally available
             window.startAudioCall = () => this.initiateCall();
+        }
+
+        /**
+         * Get optimized audio constraints based on network quality
+         */
+        getOptimizedAudioConstraints() {
+            // Check current network quality from messageQueue if available
+            let networkQuality = 'good';
+            if (window.messageQueue && window.messageQueue.getConnectionQuality) {
+                networkQuality = window.messageQueue.getConnectionQuality().quality || 'good';
+            }
+
+            // Also check Network Information API
+            if ('connection' in navigator) {
+                const conn = navigator.connection;
+                if (conn.effectiveType === '2g' || conn.effectiveType === 'slow-2g') {
+                    networkQuality = 'poor';
+                } else if (conn.effectiveType === '3g') {
+                    networkQuality = 'slow';
+                }
+            }
+
+            console.log(`📶 Audio call network quality: ${networkQuality}`);
+
+            // Base constraints with noise handling
+            const baseConstraints = {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            };
+
+            switch (networkQuality) {
+                case 'poor':
+                    // Very low bandwidth - minimal audio
+                    return {
+                        ...baseConstraints,
+                        sampleRate: 8000, // Phone quality
+                        channelCount: 1,
+                        sampleSize: 8
+                    };
+                case 'slow':
+                    // Limited bandwidth - reduced quality
+                    return {
+                        ...baseConstraints,
+                        sampleRate: 16000, // Good speech quality
+                        channelCount: 1,
+                        sampleSize: 16
+                    };
+                default:
+                    // Good connection - high quality
+                    return {
+                        ...baseConstraints,
+                        sampleRate: 48000,
+                        channelCount: 1,
+                        sampleSize: 16
+                    };
+            }
         }
 
         createCallPopup() {
@@ -366,9 +433,11 @@
             this.showCallPopup('outgoing');
 
             try {
-                // Get audio stream
+                // Get optimized audio constraints based on network quality
+                const audioConstraints = this.getOptimizedAudioConstraints();
+
                 this.localStream = await navigator.mediaDevices.getUserMedia({
-                    audio: true,
+                    audio: audioConstraints,
                     video: false
                 });
 
@@ -443,11 +512,48 @@
             this.peerConnection.onconnectionstatechange = () => {
                 console.log('Connection state:', this.peerConnection.connectionState);
 
-                if (this.peerConnection.connectionState === 'connected') {
-                    this.onCallConnected();
-                } else if (this.peerConnection.connectionState === 'failed' ||
-                    this.peerConnection.connectionState === 'disconnected') {
-                    this.endCall();
+                switch (this.peerConnection.connectionState) {
+                    case 'connected':
+                        this.onCallConnected();
+                        break;
+                    case 'disconnected':
+                        // Don't end immediately - try to reconnect
+                        this.handleConnectionInterruption();
+                        break;
+                    case 'failed':
+                        // Connection completely failed
+                        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+                            this.showNotification('Call failed - connection lost', 'error');
+                            this.endCall();
+                        } else {
+                            this.handleConnectionInterruption();
+                        }
+                        break;
+                }
+            };
+
+            // ICE connection state for more granular connection monitoring
+            this.peerConnection.oniceconnectionstatechange = () => {
+                console.log('ICE connection state:', this.peerConnection.iceConnectionState);
+
+                switch (this.peerConnection.iceConnectionState) {
+                    case 'checking':
+                        // Still connecting
+                        break;
+                    case 'connected':
+                    case 'completed':
+                        this.handleConnectionRestored();
+                        break;
+                    case 'disconnected':
+                        this.handleConnectionInterruption();
+                        break;
+                    case 'failed':
+                        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                            this.attemptReconnect();
+                        } else {
+                            this.endCall();
+                        }
+                        break;
                 }
             };
 
@@ -468,6 +574,9 @@
 
             // Listen for call events (emoji, raise hand)
             this.listenForCallEvents();
+
+            // Start connection quality monitoring
+            this.startConnectionMonitoring();
         }
 
         async renegotiateConnection() {
@@ -737,12 +846,19 @@
             this.stopTimer();
             this.stopRingtone();
 
+            // Stop connection monitoring
+            this.stopConnectionMonitoring();
+
             // FULL STATE RESET
             this.callState = 'idle';
             this.callId = null;
             this.isMuted = false;
             this.remoteScreenActive = false;
             this.isHandRaised = false;
+            this.isReconnecting = false;
+            this.reconnectAttempts = 0;
+            this.pausedDuration = 0;
+            this.connectionQuality = 'good';
 
             // Reset UI buttons for Camera/Mute
             const cameraBtn = document.getElementById('btn-camera');
@@ -785,8 +901,11 @@
             if (incomingControls) incomingControls.style.display = 'none';
 
             try {
+                // Get optimized audio constraints based on network quality
+                const audioConstraints = this.getOptimizedAudioConstraints();
+
                 this.localStream = await navigator.mediaDevices.getUserMedia({
-                    audio: true,
+                    audio: audioConstraints,
                     video: false
                 });
 
@@ -872,6 +991,222 @@
                 this.callTimer = null;
             }
         }
+
+        /**
+         * Pause timer during reconnection
+         */
+        pauseTimer() {
+            if (this.callTimer) {
+                this.pausedDuration = this.callDuration;
+                clearInterval(this.callTimer);
+                this.callTimer = null;
+                console.log(`⏸️ Timer paused at ${this.pausedDuration}s`);
+            }
+        }
+
+        /**
+         * Resume timer after successful reconnection
+         */
+        resumeTimer() {
+            if (this.pausedDuration > 0 && !this.callTimer) {
+                this.callDuration = this.pausedDuration;
+                const timerEl = document.getElementById('call-timer');
+
+                this.callTimer = setInterval(() => {
+                    this.callDuration++;
+                    const minutes = Math.floor(this.callDuration / 60).toString().padStart(2, '0');
+                    const seconds = (this.callDuration % 60).toString().padStart(2, '0');
+                    if (timerEl) timerEl.textContent = `${minutes}:${seconds}`;
+                }, 1000);
+
+                // Restore timer display
+                if (timerEl) {
+                    timerEl.style.display = 'block';
+                    timerEl.style.color = ''; // Reset color
+                }
+
+                console.log(`▶️ Timer resumed from ${this.pausedDuration}s`);
+                this.pausedDuration = 0;
+            }
+        }
+
+        /**
+         * Handle connection interruption - show reconnecting status
+         */
+        handleConnectionInterruption() {
+            if (this.isReconnecting) return; // Already handling
+
+            this.isReconnecting = true;
+            this.callState = 'reconnecting';
+            this.reconnectAttempts++;
+
+            console.log(`🔄 Connection interrupted (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+
+            // Pause the timer
+            this.pauseTimer();
+
+            // Show reconnecting status instead of timer
+            const timerEl = document.getElementById('call-timer');
+            const statusEl = document.getElementById('call-status');
+
+            if (timerEl) {
+                timerEl.textContent = 'Reconnecting...';
+                timerEl.style.color = '#f59e0b'; // Amber color
+                timerEl.style.display = 'block';
+            }
+
+            if (statusEl) {
+                statusEl.textContent = 'Poor connection';
+                statusEl.style.color = '#f59e0b';
+            }
+
+            // Show notification
+            this.showNotification('Connection interrupted, reconnecting...', 'warning');
+
+            // Set a timeout to end call if reconnection fails
+            this.reconnectTimeout = setTimeout(() => {
+                if (this.isReconnecting) {
+                    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+                        this.showNotification('Call ended - could not reconnect', 'error');
+                        this.endCall();
+                    } else {
+                        this.attemptReconnect();
+                    }
+                }
+            }, 10000); // 10 seconds to reconnect
+        }
+
+        /**
+         * Handle connection restored - resume normal call
+         */
+        handleConnectionRestored() {
+            if (!this.isReconnecting && this.callState === 'connected') return;
+
+            console.log('✅ Connection restored!');
+
+            // Clear reconnect timeout
+            if (this.reconnectTimeout) {
+                clearTimeout(this.reconnectTimeout);
+                this.reconnectTimeout = null;
+            }
+
+            this.isReconnecting = false;
+            this.reconnectAttempts = 0;
+            this.callState = 'connected';
+
+            // Resume the timer
+            this.resumeTimer();
+
+            // Update status
+            const statusEl = document.getElementById('call-status');
+            if (statusEl) {
+                statusEl.textContent = '';
+                statusEl.style.color = '';
+            }
+
+            // Show success notification
+            this.showNotification('Connection restored', 'success');
+        }
+
+        /**
+         * Attempt to reconnect via ICE restart
+         */
+        async attemptReconnect() {
+            if (!this.peerConnection || !this.isInitiator) return;
+
+            console.log('🔄 Attempting ICE restart...');
+
+            try {
+                // Create new offer with ICE restart
+                const offer = await this.peerConnection.createOffer({ iceRestart: true });
+                await this.peerConnection.setLocalDescription(offer);
+
+                // Send restart offer via Firebase
+                await firebase.database().ref(`calls/${this.currentPeer.uid}/${this.callId}/restart`).set({
+                    type: 'offer',
+                    from: this.currentUser.uid,
+                    offer: {
+                        type: offer.type,
+                        sdp: offer.sdp
+                    },
+                    timestamp: Date.now()
+                });
+
+                console.log('📤 ICE restart offer sent');
+            } catch (error) {
+                console.error('ICE restart failed:', error);
+            }
+        }
+
+        /**
+         * Start connection quality monitoring
+         */
+        startConnectionMonitoring() {
+            // Monitor connection stats periodically
+            this.statsInterval = setInterval(async () => {
+                if (!this.peerConnection || this.callState !== 'connected') return;
+
+                try {
+                    const stats = await this.peerConnection.getStats();
+                    let audioPacketsLost = 0;
+                    let audioPacketsReceived = 0;
+                    let roundTripTime = 0;
+
+                    stats.forEach(report => {
+                        if (report.type === 'inbound-rtp' && report.mediaType === 'audio') {
+                            audioPacketsLost = report.packetsLost || 0;
+                            audioPacketsReceived = report.packetsReceived || 0;
+                            this.lastAudioActivity = Date.now();
+                        }
+                        if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                            roundTripTime = report.currentRoundTripTime || 0;
+                        }
+                    });
+
+                    // Calculate packet loss percentage
+                    const totalPackets = audioPacketsReceived + audioPacketsLost;
+                    const lossPercentage = totalPackets > 0 ? (audioPacketsLost / totalPackets) * 100 : 0;
+
+                    // Update connection quality
+                    if (lossPercentage > 10 || roundTripTime > 0.5) {
+                        this.connectionQuality = 'poor';
+                    } else if (lossPercentage > 3 || roundTripTime > 0.2) {
+                        this.connectionQuality = 'slow';
+                    } else {
+                        this.connectionQuality = 'good';
+                    }
+
+                    // Check for audio inactivity (no packets received)
+                    const timeSinceLastAudio = Date.now() - this.lastAudioActivity;
+                    if (timeSinceLastAudio > this.audioActivityTimeout && this.callState === 'connected') {
+                        console.warn(`⚠️ No audio activity for ${timeSinceLastAudio}ms`);
+                        this.handleConnectionInterruption();
+                    }
+
+                } catch (e) {
+                    console.warn('Stats collection error:', e);
+                }
+            }, 2000); // Check every 2 seconds
+        }
+
+        /**
+         * Stop connection monitoring
+         */
+        stopConnectionMonitoring() {
+            if (this.statsInterval) {
+                clearInterval(this.statsInterval);
+                this.statsInterval = null;
+            }
+            if (this.audioActivityChecker) {
+                clearInterval(this.audioActivityChecker);
+                this.audioActivityChecker = null;
+            }
+            if (this.reconnectTimeout) {
+                clearTimeout(this.reconnectTimeout);
+                this.reconnectTimeout = null;
+            }
+        }
+
 
         showCallPopup(type) {
             if (!this.callPopup) return;
