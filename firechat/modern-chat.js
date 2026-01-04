@@ -995,7 +995,7 @@ gap: 8px;
     sendTypingStatus(isActive, type = 'typing') {
         if (!this.currentPeer || !window.messageRouter?.database) return;
 
-        const typingRef = window.messageRouter.database.ref(`typing / ${this.currentPeer.uid}/${this.currentUser.uid}`);
+        const typingRef = window.messageRouter.database.ref(`typing/${this.currentPeer.uid}/${this.currentUser.uid}`);
 
         if (isActive) {
             typingRef.set({
@@ -1396,6 +1396,9 @@ gap: 8px;
 
         // --- Link Preview Detection ---
         let msgContent = this.escapeHtml(message.text || message.message);
+
+
+
         let linkPreviewHTML = '';
 
         // Simple regex to detect URLs for linkification
@@ -1450,6 +1453,20 @@ gap: 8px;
             }
         }
         // ------------------------------
+
+        // --- Fix Windows Flag Rendering (MOVED HERE TO AVOID URL CONFLICT) ---
+        // Replace Regional Indicator Symbols pairs with Flag Images
+        msgContent = msgContent.replace(/[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]/g, (match) => {
+            try {
+                // Convert flag unicode to ISO code
+                const points = [...match].map(c => c.codePointAt(0));
+                if (points.length !== 2) return match;
+                const char1 = points[0] - 127397;
+                const char2 = points[1] - 127397;
+                const iso = (String.fromCharCode(char1) + String.fromCharCode(char2)).toLowerCase();
+                return `<img src="https://flagcdn.com/24x18/${iso}.png" class="emoji-flag" alt="${match}" draggable="false" style="height: 1.2em; width: auto; display: inline-block; vertical-align: middle; margin: 0 2px;">`;
+            } catch (e) { return match; }
+        });
 
         messageDiv.innerHTML = `
             <div class="message-avatar">
@@ -3871,6 +3888,9 @@ window.openImageEditor = function (file) {
     // Read and display image
     const reader = new FileReader();
     reader.onload = (e) => {
+        preview.onload = () => {
+            if (window.initEditorCanvas) window.initEditorCanvas();
+        };
         preview.src = e.target.result;
 
         // Create thumbnail
@@ -3990,7 +4010,8 @@ window.sendEditorImage = async function () {
     // Get current edits
     const filter = window.currentFilter || 'none';
     const rotation = window.imageRotation || 0;
-    const hasEdits = window.editedImageDataUrl || filter !== 'none' || rotation !== 0;
+    const hasDrawing = window.drawingState && window.drawingState.history && window.drawingState.history.length > 0;
+    const hasEdits = window.editedImageDataUrl || filter !== 'none' || rotation !== 0 || hasDrawing;
 
     if (hasEdits && preview) {
         // Always capture the current preview state with all edits applied
@@ -4045,8 +4066,17 @@ async function captureFinalImage(imgElement, filter, rotation) {
                 ctx.translate(canvasWidth / 2, canvasHeight / 2);
                 ctx.rotate((rotation * Math.PI) / 180);
                 ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+                // Draw Overlay Canvas (Drawing/Text) if sensitive to rotation
+                const overlay = document.getElementById('editor-draw-canvas');
+                if (overlay) {
+                    ctx.drawImage(overlay, -img.width / 2, -img.height / 2);
+                }
             } else {
                 ctx.drawImage(img, 0, 0);
+                // Draw Overlay
+                const overlay = document.getElementById('editor-draw-canvas');
+                if (overlay) ctx.drawImage(overlay, 0, 0);
             }
 
             const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
@@ -4302,8 +4332,12 @@ window.rotateCropRight = function () {
 
 function applyImageRotation() {
     const preview = document.getElementById('editor-preview-image');
+    const canvas = document.getElementById('editor-draw-canvas');
     if (preview) {
         preview.style.transform = `rotate(${window.imageRotation}deg)`;
+    }
+    if (canvas) {
+        canvas.style.transform = `rotate(${window.imageRotation}deg)`;
     }
 }
 
@@ -4326,6 +4360,14 @@ window.resetCrop = function () {
 
 window.selectEditorTool = function (tool) {
     window.currentEditorTool = tool;
+
+    // Toggle Canvas Interaction
+    const canvas = document.getElementById('editor-draw-canvas');
+    if (canvas) {
+        const interactive = ['draw', 'text', 'shapes'].includes(tool);
+        canvas.style.pointerEvents = interactive ? 'auto' : 'none';
+        canvas.style.cursor = tool === 'text' ? 'text' : (interactive ? 'crosshair' : 'default');
+    }
 
     // Exit crop mode if active
     if (window.cropModeActive) {
@@ -4421,6 +4463,8 @@ window.toggleShapeDropdown = function () {
 
 window.selectShape = function (shape) {
     console.log('Selected shape:', shape);
+    window.currentShape = shape;
+    selectEditorTool('shapes');
 
     // Update shape buttons UI
     document.querySelectorAll('.shape-btn').forEach(btn => {
@@ -4887,3 +4931,238 @@ document.addEventListener('DOMContentLoaded', () => {
         headerTitleInfo.onclick = () => window.toggleInfoPanel();
     }
 });
+
+/* ================= IMAGE EDITOR TOOLS ================= */
+
+// Canvas State
+window.drawingState = {
+    isDrawing: false,
+    lastX: 0,
+    lastY: 0,
+    ctx: null,
+    history: []
+};
+
+window.initEditorCanvas = function () {
+    const preview = document.getElementById('editor-preview-image');
+    const canvas = document.getElementById('editor-draw-canvas');
+    if (!preview || !canvas) return;
+
+    // Match Resolution
+    canvas.width = preview.naturalWidth || preview.width || 800;
+    canvas.height = preview.naturalHeight || preview.height || 600;
+
+    const ctx = canvas.getContext('2d');
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    window.drawingState.ctx = ctx;
+    window.drawingState.history = [];
+
+    let snapshot = null; // To store state before shape drag
+
+    // Helper: Screen to Canvas Coords
+    const getCoords = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        let clientX = e.clientX;
+        let clientY = e.clientY;
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        }
+        return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+        };
+    };
+
+    const handleStart = (e) => {
+        const coords = getCoords(e);
+
+        // Text Tool
+        if (window.currentEditorTool === 'text') {
+            e.preventDefault();
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+            if (e.touches && e.touches.length > 0) { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; }
+            spawnTextInput(clientX, clientY, coords);
+            return;
+        }
+
+        // Draw Tool
+        if (window.currentEditorTool === 'draw') {
+            e.preventDefault();
+            window.drawingState.isDrawing = true;
+            window.drawingState.lastX = coords.x;
+            window.drawingState.lastY = coords.y;
+            saveState();
+
+            const ctx = window.drawingState.ctx;
+            ctx.strokeStyle = window.currentEditorColor || '#ff0000';
+            ctx.lineWidth = Math.max(5, canvas.width / 150);
+            ctx.beginPath();
+            ctx.moveTo(coords.x, coords.y);
+        }
+
+        // Shape Tool
+        if (window.currentEditorTool === 'shapes') {
+            e.preventDefault();
+            window.drawingState.isDrawing = true;
+            window.drawingState.startX = coords.x;
+            window.drawingState.startY = coords.y;
+            saveState();
+
+            snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height); // Capture for preview
+
+            ctx.strokeStyle = window.currentEditorColor || '#ff0000';
+            ctx.lineWidth = Math.max(5, canvas.width / 150);
+        }
+    };
+
+    const handleMove = (e) => {
+        if (!window.drawingState.isDrawing) return;
+        e.preventDefault();
+        const c = getCoords(e);
+        const ctx = window.drawingState.ctx;
+
+        if (window.currentEditorTool === 'draw') {
+            ctx.lineTo(c.x, c.y);
+            ctx.stroke();
+            window.drawingState.lastX = c.x;
+            window.drawingState.lastY = c.y;
+        }
+
+        if (window.currentEditorTool === 'shapes') {
+            if (snapshot) ctx.putImageData(snapshot, 0, 0); // Restore background
+
+            const startX = window.drawingState.startX;
+            const startY = window.drawingState.startY;
+            const w = c.x - startX;
+            const h = c.y - startY;
+
+            ctx.beginPath();
+            if (window.currentShape === 'rectangle') {
+                ctx.rect(startX, startY, w, h);
+                ctx.stroke();
+            } else if (window.currentShape === 'circle') {
+                ctx.ellipse(startX + w / 2, startY + h / 2, Math.abs(w / 2), Math.abs(h / 2), 0, 0, 2 * Math.PI);
+                ctx.stroke();
+            } else if (window.currentShape === 'line') {
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(c.x, c.y);
+                ctx.stroke();
+            } else if (window.currentShape === 'arrow') {
+                drawArrow(ctx, startX, startY, c.x, c.y);
+            }
+        }
+    };
+
+    const handleEnd = () => {
+        if (window.drawingState.isDrawing) {
+            window.drawingState.isDrawing = false;
+            window.drawingState.ctx.closePath();
+            snapshot = null;
+        }
+    };
+
+    canvas.onmousedown = handleStart;
+    canvas.onmousemove = handleMove;
+    canvas.onmouseup = handleEnd;
+    canvas.onmouseout = handleEnd;
+
+    canvas.ontouchstart = handleStart;
+    canvas.ontouchmove = handleMove;
+    canvas.ontouchend = handleEnd;
+};
+
+function drawArrow(ctx, fromX, fromY, toX, toY) {
+    const headlen = Math.max(10, ctx.canvas.width / 50);
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    const angle = Math.atan2(dy, dx);
+    ctx.moveTo(fromX, fromY);
+    ctx.lineTo(toX, toY);
+    ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+    ctx.moveTo(toX, toY);
+    ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+    ctx.stroke();
+}
+
+function saveState() {
+    const canvas = document.getElementById('editor-draw-canvas');
+    if (window.drawingState.history.length > 10) window.drawingState.history.shift();
+    window.drawingState.history.push(canvas.toDataURL());
+}
+
+// Text Input Logic
+function spawnTextInput(clientX, clientY, canvasCoords) {
+    const wrapper = document.getElementById('editor-preview-wrapper');
+    const existing = document.getElementById('temp-text-input');
+    if (existing) {
+        // commit existing
+        commitText(existing, JSON.parse(existing.dataset.coords));
+        return;
+    }
+
+    const input = document.createElement('input');
+    input.id = 'temp-text-input';
+    input.type = 'text';
+    input.style.position = 'absolute';
+    input.style.zIndex = '100';
+    input.style.background = 'rgba(0,0,0,0.5)';
+    input.style.border = 'none';
+    input.style.borderRadius = '4px';
+    input.style.padding = '4px';
+    input.style.outline = 'none';
+    input.style.color = window.currentEditorColor || '#ff0000';
+    input.style.fontSize = '24px';
+    input.style.fontWeight = 'bold';
+
+    const rect = wrapper.getBoundingClientRect();
+    input.style.left = (clientX - rect.left) + 'px';
+    input.style.top = (clientY - rect.top) + 'px';
+    input.dataset.coords = JSON.stringify(canvasCoords);
+
+    input.onblur = () => commitText(input, canvasCoords);
+    input.onkeydown = (k) => { if (k.key === 'Enter') input.blur(); };
+
+    wrapper.appendChild(input);
+    setTimeout(() => input.focus(), 10);
+}
+
+function commitText(input, coords) {
+    if (!input || !input.parentNode || input.dataset.committed) return;
+    input.dataset.committed = 'true';
+    const text = input.value.trim();
+    if (text) {
+        saveState();
+        const ctx = window.drawingState.ctx;
+        ctx.fillStyle = input.style.color;
+        const fontSize = Math.max(20, ctx.canvas.width / 25);
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.fillText(text, coords.x, coords.y + fontSize);
+    }
+    if (input.parentNode) input.parentNode.removeChild(input);
+}
+
+// Global Undo
+window.editorUndo = function () {
+    if (window.drawingState.history.length > 0) {
+        const last = window.drawingState.history.pop();
+        const img = new Image();
+        img.src = last;
+        img.onload = () => {
+            const canvas = document.getElementById('editor-draw-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+        };
+    } else {
+        const canvas = document.getElementById('editor-draw-canvas');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    }
+};

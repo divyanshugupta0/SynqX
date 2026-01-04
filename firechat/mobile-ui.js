@@ -247,6 +247,10 @@ console.log('📱 Mobile UI Module Loaded');
 
             if (isSupported) {
                 // Direct display for supported formats
+                previewImg.onload = () => {
+                    if (window.initMobileCanvas) window.initMobileCanvas();
+                    document.querySelectorAll('.mobile-filter-thumb').forEach(t => t.src = previewImg.src);
+                };
                 previewImg.src = dataUrl;
                 window._mobileEditorImageData = dataUrl;
             } else {
@@ -255,6 +259,10 @@ console.log('📱 Mobile UI Module Loaded');
                 convertImageFormat(dataUrl, (convertedDataUrl, success) => {
                     if (success && convertedDataUrl) {
                         console.log('📱 Conversion successful');
+                        previewImg.onload = () => {
+                            if (window.initMobileCanvas) window.initMobileCanvas();
+                            document.querySelectorAll('.mobile-filter-thumb').forEach(t => t.src = previewImg.src);
+                        };
                         previewImg.src = convertedDataUrl;
                         window._mobileEditorImageData = convertedDataUrl;
                     } else {
@@ -336,6 +344,27 @@ console.log('📱 Mobile UI Module Loaded');
     // Send image from mobile editor
     window.sendMobileEditorImage = async function () {
         const caption = document.getElementById('mobile-editor-caption')?.value.trim() || '';
+
+        // Merge Canvas Edits
+        const preview = document.getElementById('mobile-editor-image');
+        const canvas = document.getElementById('mobile-editor-canvas');
+        if (preview && canvas) {
+            const merge = document.createElement('canvas');
+            merge.width = canvas.width;
+            merge.height = canvas.height;
+            const ctx = merge.getContext('2d');
+
+            if (window.currentMobileFilter && window.currentMobileFilter !== 'none') {
+                ctx.filter = window.currentMobileFilter;
+            }
+
+            ctx.drawImage(preview, 0, 0, merge.width, merge.height);
+
+            ctx.filter = 'none';
+            ctx.drawImage(canvas, 0, 0);
+            window._mobileEditorImageData = merge.toDataURL('image/jpeg', 0.9);
+        }
+
         const imageData = window._mobileEditorImageData;
 
         if (!imageData) {
@@ -379,6 +408,34 @@ console.log('📱 Mobile UI Module Loaded');
         const closeBtn = document.getElementById('mobile-editor-close');
         const sendBtn = document.getElementById('mobile-editor-send');
         const doneBtn = document.getElementById('mobile-editor-done');
+
+        // Tool Buttons
+        const toolBtns = document.querySelectorAll('.mobile-editor-btn[data-tool]');
+        console.log('📱 Found mobile tool buttons:', toolBtns.length);
+
+        toolBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('📱 Tool clicked:', btn.dataset.tool);
+
+                document.querySelectorAll('.mobile-editor-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const tool = btn.dataset.tool;
+                window.currentMobileTool = tool;
+
+                const canvas = document.getElementById('mobile-editor-canvas');
+                const filterUi = document.getElementById('mobile-filter-ui');
+
+                if (filterUi) filterUi.style.display = (tool === 'filters') ? 'block' : 'none';
+
+                if (canvas) {
+                    canvas.style.pointerEvents = (tool === 'draw' || tool === 'text') ? 'auto' : 'none';
+                    console.log('📱 Canvas tool set:', tool, 'Pointer events:', canvas.style.pointerEvents);
+                }
+            });
+        });
 
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
@@ -660,5 +717,139 @@ console.log('📱 Mobile UI Module Loaded');
 
     // Initialize profile preview handlers
     initProfilePreviewHandlers();
+
+    window.applyMobileFilter = function (filter) {
+        window.currentMobileFilter = filter;
+        const img = document.getElementById('mobile-editor-image');
+        if (img) img.style.filter = filter;
+        // Highlight logic
+        const clicked = event ? event.currentTarget : null;
+        if (clicked && clicked.classList.contains('mobile-filter-option')) {
+            document.querySelectorAll('.mobile-filter-thumb').forEach(t => t.style.borderColor = 'transparent');
+            const thumb = clicked.querySelector('img');
+            if (thumb) thumb.style.borderColor = '#fff';
+        }
+    };
+
+    /* === MOBILE DRAWING TOOLS === */
+    window.mobileDrawingState = { isDrawing: false, lastX: 0, lastY: 0, ctx: null, history: [] };
+
+    window.initMobileCanvas = function () {
+        console.log('📱 initMobileCanvas running');
+        const preview = document.getElementById('mobile-editor-image');
+        const canvas = document.getElementById('mobile-editor-canvas');
+        if (!preview || !canvas) {
+            console.error('📱 Canvas or Preview not found');
+            return;
+        }
+
+        canvas.width = preview.naturalWidth || preview.width || 800;
+        canvas.height = preview.naturalHeight || preview.height || 600;
+
+        const ctx = canvas.getContext('2d');
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        window.mobileDrawingState.ctx = ctx;
+        window.mobileDrawingState.history = [];
+
+        const getCoords = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            }
+            return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+        };
+
+        const handleStart = (e) => {
+            console.log('📱 Canvas touchstart. Tool:', window.currentMobileTool);
+            if (window.currentMobileTool === 'text') {
+                if (e.cancelable) e.preventDefault();
+                let clientX = e.clientX || (e.touches[0] && e.touches[0].clientX);
+                let clientY = e.clientY || (e.touches[0] && e.touches[0].clientY);
+                spawnMobileText(clientX, clientY, getCoords(e));
+                return;
+            }
+            if (window.currentMobileTool === 'draw') {
+                if (e.cancelable) e.preventDefault();
+                window.mobileDrawingState.isDrawing = true;
+                const c = getCoords(e);
+                window.mobileDrawingState.lastX = c.x;
+                window.mobileDrawingState.lastY = c.y;
+                const ctx = window.mobileDrawingState.ctx;
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = Math.max(5, canvas.width / 100);
+                ctx.beginPath();
+                ctx.moveTo(c.x, c.y);
+            }
+        };
+        const handleMove = (e) => {
+            if (!window.mobileDrawingState.isDrawing || window.currentMobileTool !== 'draw') return;
+            if (e.cancelable) e.preventDefault();
+            const c = getCoords(e);
+            const ctx = window.mobileDrawingState.ctx;
+            ctx.lineTo(c.x, c.y);
+            ctx.stroke();
+            window.mobileDrawingState.lastX = c.x;
+            window.mobileDrawingState.lastY = c.y;
+        };
+        const handleEnd = () => {
+            if (window.mobileDrawingState.isDrawing) {
+                window.mobileDrawingState.isDrawing = false;
+                window.mobileDrawingState.ctx.closePath();
+            }
+        };
+
+        canvas.ontouchstart = handleStart;
+        canvas.ontouchmove = handleMove;
+        canvas.ontouchend = handleEnd;
+        canvas.onmousedown = handleStart;
+        canvas.onmousemove = handleMove;
+        canvas.onmouseup = handleEnd;
+    };
+
+    function spawnMobileText(clientX, clientY, coords) {
+        const wrapper = document.querySelector('.mobile-editor-preview');
+        const existing = document.getElementById('mob-temp-text');
+        if (existing) { commitMobileText(existing, JSON.parse(existing.dataset.coords)); return; }
+
+        const input = document.createElement('input');
+        input.id = 'mob-temp-text';
+        input.type = 'text';
+        input.style.position = 'absolute';
+        input.style.zIndex = '100';
+        input.style.background = 'rgba(0,0,0,0.5)';
+        input.style.color = '#fff';
+        input.style.fontSize = '24px';
+        input.style.border = 'none';
+
+        const rect = wrapper.getBoundingClientRect();
+        input.style.left = (clientX - rect.left) + 'px';
+        input.style.top = (clientY - rect.top) + 'px';
+        input.dataset.coords = JSON.stringify(coords);
+
+        input.onblur = () => commitMobileText(input, coords);
+        input.onkeydown = (k) => { if (k.key === 'Enter') input.blur(); };
+
+        wrapper.appendChild(input);
+        setTimeout(() => input.focus(), 10);
+    }
+
+    function commitMobileText(input, coords) {
+        if (!input.parentNode) return;
+        const text = input.value.trim();
+        if (text) {
+            const ctx = window.mobileDrawingState.ctx;
+            ctx.fillStyle = '#ff0000';
+            const fs = Math.max(20, ctx.canvas.width / 20);
+            ctx.font = `bold ${fs}px sans-serif`;
+            ctx.fillText(text, coords.x, coords.y);
+        }
+        input.remove();
+    }
 
 })();

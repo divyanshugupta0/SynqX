@@ -178,19 +178,9 @@
         }
 
         async loadEmojis() {
-            try {
-                const response = await fetch(`https://emoji-api.com/emojis?access_key=${this.apiKey}`);
-                if (!response.ok) throw new Error('API Error');
-
-                const data = await response.json();
-                if (!Array.isArray(data) || data.length === 0) throw new Error('Invalid Data');
-
-                this.emojis = data;
-                console.log(`✅ Loaded ${this.emojis.length} emojis`);
-            } catch (err) {
-                console.warn('⚠️ Using fallback emojis:', err);
-                this.emojis = this.getFallbackData();
-            }
+            // Use local robust dataset immediately - faster and reliable
+            console.log('🚀 Loading local emoji dataset...');
+            this.emojis = this.getLocalEmojiData();
 
             this.processCategories();
 
@@ -204,14 +194,184 @@
             Object.keys(this.categoryIcons).forEach(key => this.categories[key] = []);
 
             this.emojis.forEach(emoji => {
-                const group = emoji.group; // API uses same slugs as our keys: 'smileys-emotion' etc.
+                const group = emoji.group;
                 if (this.categories[group]) {
                     this.categories[group].push(emoji);
-                } else {
-                    // Put unknowns in first category or ignore
-                    // this.categories['smileys-emotion'].push(emoji);
                 }
             });
+        }
+
+        getLocalEmojiData() {
+            // Format: "char|keywords" - Group is determined by section
+            const dataset = {
+                'smileys-emotion': [
+                    "😀|grinning face happy smile", "😃|grinning face with big eyes happy", "😄|grinning face with smiling eyes happy", "😁|beaming face with smiling eyes happy",
+                    "😆|grinning squinting face happy laugh", "😅|grinning face with sweat relief", "😂|face with tears of joy laugh cry", "🤣|rolling on the floor laughing",
+                    "🥲|smiling face with tear emotional", "🥹|face holding back tears", "☺️|smiling face happy", "😊|smiling face with smiling eyes happy",
+                    "😇|smiling face with halo angel", "🙂|slightly smiling face", "🙃|upside-down face silly", "😉|winking face flirt", "😌|relieved face",
+                    "😍|smiling face with heart-eyes love", "🥰|smiling face with hearts love", "😘|face blowing a kiss love", "😗|kissing face", "😙|kissing face with smiling eyes",
+                    "😚|kissing face with closed eyes", "😋|face savoring food yum", "😛|face with tongue silly", "😝|squinting face with tongue silly", "😜|winking face with tongue silly",
+                    "🤪|zany face silly crazy", "🤨|face with raised eyebrow skeptical", "🧐|face with monocle sophisticated", "🤓|nerd face smart", "😎|smiling face with sunglasses cool",
+                    "🥸|disguised face glasses", "🤩|star-struck excited", "🥳|partying face celebration", "😏|smirking face flirt", "😒|unamused face annoyed", "😞|disappointed face sad",
+                    "😔|pensive face sad", "😟|worried face", "😕|confused face", "🙁|slightly frowning face sad", "☹️|frowning face sad", "😣|persevering face struggle",
+                    "😖|confounded face struggle", "😫|tired face exhaust", "😩|weary face exhaust", "🥺|pleading face beg", "😢|crying face sad tear", "😭|loudly crying face sad sob",
+                    "😤|face with steam from nose angry", "😠|angry face mad", "😡|pouting face angry mad", "🤬|face with symbols on mouth swear", "🤯|exploding head mind blown",
+                    "😳|flushed face embarrassed", "🥵|hot face heat", "🥶|cold face freeze", "😱|face screaming in fear scared", "😨|fearful face scared", "😰|anxious face with sweat nervous",
+                    "😥|sad but relieved face", "😓|downcast face with sweat", "🤗|hugging face hug", "🤔|thinking face wonder", "🫣|face with peeking eye shy",
+                    "🤭|face with hand over mouth giggle", "🤫|shushing face quiet", "🫠|melting face hot", "🤥|lying face pinocchio", "😶|face without mouth silent",
+                    "😐|neutral face meh", "😑|expressionless face meh", "😬|grimacing face awkward", "🙄|face with rolling eyes eyeroll", "😯|hushed face surprise",
+                    "😦|frowning face with open mouth", "😧|anguished face", "😮|face with open mouth surprise", "😲|astonished face shock", "🥱|yawning face tired",
+                    "😴|sleeping face sleep", "🤤|drooling face hungry", "😪|sleepy face tired", "😵|dizzy face sick", "😵‍💫|face with spiral eyes dizzy", "🤐|zipper-mouth face silent",
+                    "🥴|woozy face drunk", "🤢|nauseated face sick", "🤮|face vomiting sick", "🤧|sneezing face sick", "😷|face with medical mask sick", "🤒|face with thermometer sick",
+                    "🤕|face with head-bandage hurt", "🤑|money-mouth face rich", "🤠|cowboy hat face", "😈|smiling face with horns devil", "👿|angry face with horns devil",
+                    "🤡|clown face circus", "💩|pile of poo poop", "👻|ghost halloween", "💀|skull death", "☠️|skull and crossbones death", "👽|alien ufo", "👾|alien monster game",
+                    "🤖|robot bot", "🎃|jack-o-lantern pumpkin", "😺|grinning cat", "😸|grinning cat with smiling eyes", "😹|cat with tears of joy", "😻|smiling cat with heart-eyes love",
+                    "😼|cat with wry smile", "😽|kissing cat", "🙀|weary cat", "😿|crying cat", "😾|pouting cat", "❤️|red heart love", "🧡|orange heart love", "💛|yellow heart love",
+                    "💚|green heart love", "💙|blue heart love", "💜|purple heart love", "🖤|black heart love", "🤍|white heart love", "🤎|brown heart love", "💔|broken heart sad"
+                ],
+                'people-body': [
+                    "👋|waving hand hello", "🤚|raised back of hand", "🖐️|hand with fingers splayed", "✋|raised hand stop", "🖖|vulcan salute spock", "👌|OK hand okay",
+                    "🤌|pinched fingers italian", "🤏|pinching hand small", "✌️|victory hand peace", "🤞|crossed fingers luck", "🤟|love-you gesture", "🤘|sign of the horns rock",
+                    "🤙|call me hand phone", "👈|backhand index pointing left", "👉|backhand index pointing right", "👆|backhand index pointing up", "🖕|middle finger rude",
+                    "👇|backhand index pointing down", "☝️|index pointing up one", "👍|thumbs up like", "👎|thumbs down dislike", "✊|raised fist power", "👊|oncoming fist punch",
+                    "🤛|left-facing fist punch", "🤜|right-facing fist punch", "👏|clapping hands applause", "🙌|raising hands celebration", "👐|open hands", "🤲|palms up together",
+                    "🤝|handshake deal", "🙏|folded hands pray thanks", "✍️|writing hand", "💅|nail polish sassy", "🤳|selfie phone", "💪|flexed biceps strong", "🧠|brain smart",
+                    "👀|eyes look", "👁️|eye look", "👄|mouth kiss", "💋|kiss mark love", "👶|baby child", "👧|girl child", "🧒|child kid", "👦|boy child", "👩|woman female",
+                    "🧑|person gender neutral", "👨|man male", "👱|person: blond hair", "🧔|person: beard", "👵|old woman grandma", "🧓|older person", "👴|old man grandpa",
+                    "👮|police officer", "👷|construction worker", "💂|guard", "🕵️|detective spy", "👩‍⚕️|woman health worker doctor", "👨‍⚕️|man health worker doctor",
+                    "👩‍🎓|woman student grad", "👨‍🎓|man student grad", "👩‍🏫|woman teacher", "👨‍🏫|man teacher", "👩‍💻|woman technologist developer", "👨‍💻|man technologist developer",
+                    "👰|person with veil wedding", "🤵|person in tuxedo wedding", "👸|princess queen", "🤴|prince king", "🤰|pregnant woman", "🤱|breast-feeding",
+                    "💃|woman dancing", "🕺|man dancing", "👫|woman and man holding hands", "💏|kissing", "💑|couple with heart", "👪|family"
+                ],
+                'animals-nature': [
+                    "🐶|dog face puppy", "🐕|dog puppy", "🐩|poodle dog", "🐺|wolf", "🦊|fox", "🦝|raccoon", "🐱|cat face kitten", "🐈|cat kitten", "🦁|lion", "🐯|tiger face",
+                    "🐅|tiger", "🐆|leopard", "🐴|horse face", "🐎|horse", "🦄|unicorn magic", "🦓|zebra", "🦌|deer", "🐮|cow face", "🐂|ox", "🐃|water buffalo", "🐄|cow",
+                    "🐷|pig face", "🐖|pig", "🐗|boar", "🐽|pig nose", "🐏|ram", "🐑|sheep", "🐐|goat", "🐪|camel", "🐫|two-hump camel", "🦙|llama", "🦒|giraffe", "🐘|elephant",
+                    "🦏|rhinoceros", "🦛|hippopotamus", "🐭|mouse face", "🐁|mouse", "🐀|rat", "🐹|hamster", "🐰|rabbit face bunny", "🐇|rabbit bunny", "🐿️|chipmunk", "🦇|bat",
+                    "🐻|bear", "🐨|koala", "🐼|panda", "🦥|sloth", "🦦|otter", "🦨|skunk", "🦘|kangaroo", "🦡|badger", "🐾|paw prints", "🦃|turkey", "🐔|chicken", "🐓|rooster",
+                    "🐣|hatching chick", "🐤|baby chick", "🐥|front-facing baby chick", "🐦|bird", "🐧|penguin", "🕊️|dove peace", "🦅|eagle", "🦆|duck", "🦢|swan", "🦉|owl",
+                    "🦩|flamingo", "🦚|peacock", "🦜|parrot", "🐸|frog", "🐊|crocodile", "🐢|turtle", "🦎|lizard", "🐍|snake", "🐲|dragon face", "🐉|dragon", "🦕|sauropod dinosaur",
+                    "🦖|t-rex dinosaur", "🐳|spouting whale", "🐋|whale", "🐬|dolphin", "🐟|fish", "🐠|tropical fish", "🐡|blowfish", "🦈|shark", "🐙|octopus", "🐚|spiral shell",
+                    "🐌|snail", "🦋|butterfly", "🐛|bug", "🐜|ant", "🐝|honeybee", "🐞|lady beetle ladybug", "🦗|cricket", "🕷️|spider", "🕸️|spider web", "🦂|scorpion", "🦟|mosquito",
+                    "🦠|microbe virus", "💐|bouquet flowers", "🌸|cherry blossom flower", "💮|white flower", "🏵️|rosette", "🌹|rose flower love", "🥀|wilted flower", "🌺|hibiscus flower",
+                    "🌻|sunflower", "🌼|blossom", "🌷|tulip", "🌱|seedling plant", "🪴|potted plant", "🌲|evergreen tree", "🌳|deciduous tree", "🌴|palm tree", "🌵|cactus",
+                    "🌾|sheaf of rice", "🌿|herb", "☘️|shamrock", "🍀|four leaf clover luck", "🍁|maple leaf", "🍂|fallen leaf", "🍃|leaf fluttering in wind", "🍄|mushroom",
+                    "🌑|new moon", "🌒|waxing crescent moon", "🌓|first quarter moon", "🌔|waxing gibbous moon", "🌕|full moon", "🌖|waning gibbous moon", "🌗|last quarter moon",
+                    "🌘|waning crescent moon", "🌙|crescent moon", "🌚|new moon face", "🌛|first quarter moon face", "🌜|last quarter moon face", "☀️|sun", "🌝|full moon face",
+                    "🌞|sun with face", "⭐|star", "🌟|glowing star", "🌠|shooting star", "☁️|cloud", "⛅|sun behind cloud", "⛈️|cloud with lightning and rain", "🌤️|sun behind small cloud",
+                    "🌥️|sun behind large cloud", "🌦️|sun behind rain cloud", "🌧️|cloud with rain", "🌨️|cloud with snow", "🌩️|cloud with lightning", "🌪️|tornado", "🌫️|fog",
+                    "🌬️|wind face", "🌈|rainbow", "☂️|umbrella", "☔|umbrella with rain drops", "⚡|high voltage lightning", "❄️|snowflake", "☃️|snowman", "🔥|fire hot", "💧|droplet water",
+                    "🌊|water wave"
+                ],
+                'food-drink': [
+                    "🍇|grapes", "🍈|melon", "🍉|watermelon", "🍊|tangerine", "🍋|lemon", "🍌|banana", "🍍|pineapple", "🥭|mango", "🍎|red apple", "🍏|green apple", "🍐|pear", "🍑|peach",
+                    "🍒|cherries", "🍓|strawberry", "🫐|blueberries", "🥝|kiwi fruit", "🍅|tomato", "🫒|olive", "🥥|coconut", "🥑|avocado", "🍆|eggplant", "🥔|potato", "🥕|carrot",
+                    "🌽|ear of corn", "🌶️|hot pepper", "🫑|bell pepper", "🥒|cucumber", "🥬|leafy green", "🥦|broccoli", "🧄|garlic", "🧅|onion", "🍄|mushroom", "🥜|peanuts",
+                    "🌰|chestnut", "🍞|bread", "🥐|croissant", "🥖|baguette bread", "🥨|pretzel", "🥯|bagel", "🥞|pancakes", "🧇|waffle", "🧀|cheese wedge", "🍖|meat on bone",
+                    "🍗|poultry leg", "🥩|cut of meat", "🥓|bacon", "🍔|hamburger burger", "🍟|french fries", "🍕|pizza", "🌭|hot dog", "🥪|sandwich", "🌮|taco", "🌯|burrito",
+                    "🫔|tamale", "🥙|stuffed flatbread", "🧆|falafel", "🥚|egg", "🍳|cooking", "🥘|shallow pan of food", "🍲|pot of food", "🥣|bowl with spoon", "🥗|green salad",
+                    "🍿|popcorn", "🧈|butter", "🧂|salt", "🥫|canned food", "🍱|bento box", "🍘|rice cracker", "🍙|rice ball", "🍚|cooked rice", "🍛|curry rice", "🍜|steaming bowl noodle",
+                    "🍝|spaghetti pasta", "🍠|roasted sweet potato", "🍢|oden", "🍣|sushi", "🍤|fried shrimp", "🍥|fish cake with swirl", "🥮|moon cake", "🍡|dango", "🥟|dumpling",
+                    "🥠|fortune cookie", "🥡|takeout box", "🦀|crab", "🦞|lobster", "🦐|shrimp", "🦑|squid", "🦪|oyster", "🍦|soft ice cream", "🍧|shaved ice", "🍨|ice cream",
+                    "🍩|doughnut", "🍪|cookie", "🎂|birthday cake", "🍰|shortcake", "🧁|cupcake", "🥧|pie", "🍫|chocolate bar", "🍬|candy", "🍭|lollipop", "🍮|custard",
+                    "🍯|honey pot", "🍼|baby bottle", "🥛|glass of milk", "☕|hot beverage coffee", "🫖|teapot", "🍵|teacup without handle", "🍶|sake", "🍾|bottle with popping cork",
+                    "🍷|wine glass", "🍸|cocktail glass", "🍹|tropical drink", "🍺|beer mug", "🍻|clinking beer mugs", "🥂|clinking glasses cheers", "🥃|tumbler glass whiskey",
+                    "🥤|cup with straw", "🧋|bubble tea", "🧃|beverage box", "🧉|mate", "🧊|ice", "🥢|chopsticks", "🍽️|fork and knife with plate", "🍴|fork and knife",
+                    "🥄|spoon", "🔪|kitchen knife", "🏺|amphora"
+                ],
+                'travel-places': [
+                    "🌍|globe showing Europe-Africa", "🌎|globe showing Americas", "🌏|globe showing Asia-Australia", "🗺️|world map", "🧭|compass", "🏔️|snow-capped mountain",
+                    "⛰️|mountain", "🌋|volcano", "🗻|mount fuji", "🏕️|camping", "🏖️|beach with umbrella", "🏜️|desert", "🏝️|desert island", "🏞️|national park", "🏟️|stadium",
+                    "🏛️|classical building", "🏗️|building construction", "🧱|brick", "🏠|house", "🏡|house with garden", "🏢|office building", "🏣|Japanese post office",
+                    "🏤|post office", "🏥|hospital", "🏦|bank", "🏨|hotel", "🏩|love hotel", "🏪|convenience store", "🏫|school", "🏬|department store", "🏭|factory", "🏯|Japanese castle",
+                    "🏰|castle", "💒|wedding", "🗼|Tokyo tower", "🗽|Statue of Liberty", "⛪|church", "🕌|mosque", "🛕|hindu temple", "🕍|synagogue", "⛩️|shinto shrine", "🕋|kaaba",
+                    "⛲|fountain", "⛺|tent", "🌁|foggy", "🌃|night with stars", "🏙️|cityscape", "🌄|sunrise over mountains", "🌅|sunrise", "🌆|cityscape at dusk", "🌇|sunset",
+                    "🌉|bridge at night", "🎠|horse", "🎡|ferris wheel", "🎢|roller coaster", "🎪|circus tent", "🚂|locomotive", "🚃|railway car", "🚄|high-speed train",
+                    "🚅|bullet train", "🚆|train", "🚇|metro", "🚈|light rail", "🚉|station", "🚊|tram", "🚝|monorail", "🚞|mountain railway", "🚋|tram car", "BUS|bus",
+                    "🚍|oncoming bus", "🚎|trolleybus", "🚐|minibus", "🚑|ambulance", "🚒|fire engine", "🚓|police car", "🚔|oncoming police car", "🚕|taxi", "🚖|oncoming taxi",
+                    "🚗|automobile car", "🚘|oncoming automobile", "🚙|sport utility vehicle", "🛻|pickup truck", "🚚|delivery truck", "🚛|articulated lorry", "🚜|tractor",
+                    "🏎️|racing car", "🏍️|motorcycle", "🛵|motor scooter", "🛺|auto rickshaw", "🚲|bicycle", "🛴|kick scooter", "🛹|skateboard", "🛼|roller skate", "🚏|bus stop",
+                    "⛽|fuel pump", "🚨|police car light", "🚥|horizontal traffic light", "🚦|vertical traffic light", "🛑|stop sign", "🚧|construction", "⚓|anchor", "⛵|sailboat",
+                    "🛶|canoe", "🚤|speedboat", "🛳️|passenger ship", "⛴️|ferry", "🛥️|motor boat", "🚢|ship", "✈️|airplane", "🛩️|small airplane", "🛫|airplane departure",
+                    "🛬|airplane arrival", "🪂|parachute", "💺|seat", "🚁|helicopter", "🚟|suspension railway", "🚠|mountain cableway", "🚡|aerial tramway", "🛰️|satellite",
+                    "🚀|rocket", "🛸|flying saucer"
+                ],
+                'activities': [
+                    "🎃|jack-o-lantern", "🎄|Christmas tree", "🎆|fireworks", "🎇|sparkler", "🧨|firecracker", "✨|sparkles", "🎈|balloon", "🎉|party popper", "🎊|confetti ball",
+                    "🎋|tanabata tree", "🎍|pine decoration", "🎎|Japanese dolls", "🎏|carp streamer", "🎐|wind chime", "🎑|moon viewing ceremony", "🧧|red envelope", "🎀|ribbon",
+                    "🎁|wrapped gift", "🎗️|reminder ribbon", "🎟️|admission tickets", "🎫|ticket", "🎖️|military medal", "🏆|trophy", "🏅|sports medal", "🥇|1st place medal",
+                    "🥈|2nd place medal", "🥉|3rd place medal", "⚽|soccer ball", "⚾|baseball", "🥎|softball", "🏀|basketball", "🏐|volleyball", "🏈|american football", "🏉|rugby football",
+                    "🎾|tennis", "🥏|flying disc", "🎳|bowling", "🏏|cricket game", "🏑|field hockey", "🏒|ice hockey", "🥍|lacrosse", "🏓|ping pong", "🏸|badminton", "🥊|boxing glove",
+                    "🥋|martial arts uniform", "🥅|goal net", "⛳|flag in hole", "⛸️|ice skate", "🎣|fishing pole", "🤿|diving mask", "🎽|running shirt", "🎿|skis", "🛷|sled",
+                    "🥌|curling stone", "🎯|direct hit", "🪀|yo-yo", "🪁|kite", "🎱|pool 8 ball", "🔮|crystal ball", "🪄|magic wand", "🧿|nazar amulet", "🎮|video game",
+                    "🕹️|joystick", "🎰|slot machine", "🎲|game die", "🧩|puzzle piece", "🧸|teddy bear", "🪅|piñata", "🪩|mirror ball", "🪆|nesting dolls", "♠️|spade suit",
+                    "♥️|heart suit", "♦️|diamond suit", "♣️|club suit", "♟️|chess pawn", "🃏|joker", "🀄|mahjong red dragon", "🎴|flower playing cards", "🎭|performing arts",
+                    "🖼️|framed picture", "🎨|artist palette", "🧵|thread", "🪡|sewing needle", "🧶|yarn", "🪢|knot"
+                ],
+                'objects': [
+                    "👓|glasses", "🕶️|sunglasses", "🥽|goggles", "🥼|lab coat", "🦺|safety vest", "👔|necktie", "👕|t-shirt", "👖|jeans", "🧣|scarf", "🧤|gloves", "🧥|coat",
+                    "🧦|socks", "👗|dress", "👘|kimono", "🥻|sari", "🩱|one-piece swimsuit", "🩲|briefs", "🩳|shorts", "👙|bikini", "👚|woman’s clothes", "👛|purse", "👜|handbag",
+                    "👝|clutch bag", "🛍️|shopping bags", "🎒|backpack", "🩴|thong sandal", "👞|man’s shoe", "👟|running shoe", "🥾|hiking boot", "🥿|flat shoe", "👠|high-heeled shoe",
+                    "👡|woman’s sandal", "🩰|ballet shoes", "👢|woman’s boot", "👑|crown", "👒|woman’s hat", "🎩|top hat", "🎓|graduation cap", "🧢|billed cap", "🪖|military helmet",
+                    "⛑️|rescue worker’s helmet", "📿|prayer beads", "💄|lipstick", "💍|ring", "💎|gem stone", "🔇|muted speaker", "🔈|speaker low volume", "🔉|speaker medium volume",
+                    "🔊|speaker high volume", "📢|loudspeaker", "📣|megaphone", "📯|postal horn", "🔔|bell", "🔕|bell with slash", "🎼|musical score", "🎵|musical note",
+                    "🎶|musical notes", "🎙️|studio microphone", "🎚️|level slider", "🎛️|control knobs", "🎤|microphone", "🎧|headphone", "📻|radio", "🎷|saxophone", "🪗|accordion",
+                    "🎸|guitar", "🎹|musical keyboard", "🎺|trumpet", "🎻|violin", "🪕|banjo", "🥁|drum", "🪘|long drum", "📱|mobile phone", "📲|mobile phone with arrow",
+                    "☎️|telephone", "📞|telephone receiver", "📟|pager", "📠|fax machine", "🔋|battery", "🔌|electric plug", "💻|laptop", "🖥️|desktop computer", "🖨️|printer",
+                    "⌨️|keyboard", "🖱️|computer mouse", "🖲️|trackball", "💽|computer disk", "💾|floppy disk", "💿|optical disk", "📀|dvd", "🧮|abacus", "🎥|movie camera",
+                    "🎞️|film frames", "📽️|film projector", "🎬|clapper board", "📺|television", "📷|camera", "📸|camera with flash", "📹|video camera", "📼|videocassette",
+                    "🔍|magnifying glass tilted left", "🔎|magnifying glass tilted right", "🕯️|candle", "💡|light bulb", "🔦|flashlight", "🏮|red paper lantern", "🪔|diya lamp",
+                    "📔|notebook with decorative cover", "📕|closed book", "📖|open book", "📗|green book", "📘|blue book", "📙|orange book", "📚|books", "📓|notebook",
+                    "📒|ledger", "📃|page with curl", "📜|scroll", "📄|page facing up", "📰|newspaper", "🗞️|rolled-up newspaper", "📑|bookmark tabs", "🔖|bookmark", "🏷️|label",
+                    "💰|money bag", "🪙|coin", "💴|yen banknote", "💵|dollar banknote", "💶|euro banknote", "💷|pound banknote", "💸|money with wings", "💳|credit card",
+                    "🧾|receipt", "✉️|envelope", "📧|e-mail", "📨|incoming envelope", "📩|envelope with arrow", "📤|outbox tray", "📥|inbox tray", "📦|package", "📫|closed mailbox with raised flag",
+                    "📪|closed mailbox with lowered flag", "📫|mailbox", "📭|open mailbox with lowered flag", "📮|postbox", "🗳️|ballot box with ballot", "✏️|pencil", "✒️|black nib",
+                    "🖋️|fountain pen", "🖊️|pen", "🖌️|paintbrush", "🖍️|crayon", "📝|memo", "💼|briefcase", "📁|file folder", "📂|open file folder", "🗂️|card index dividers",
+                    "📅|calendar", "📆|tear-off calendar", "🗒️|spiral notepad", "🗓️|spiral calendar", "📇|card index", "📈|chart increasing", "📉|chart decreasing", "📊|bar chart",
+                    "📋|clipboard", "📌|pushpin", "📍|round pushpin", "📎|paperclip", "🖇️|linked paperclips", "📏|straight ruler", "📐|triangular ruler", "✂️|scissors", "🗃️|card file box",
+                    "🗄️|file cabinet", "🗑️|wastebasket", "🔒|locked", "🔓|unlocked", "🔏|locked with pen", "🔐|locked with key", "🔑|key", "🗝️|old key", "🔨|hammer", "🪓|axe",
+                    "⛏️|pick", "⚒️|hammer and pick", "🛠️|hammer and wrench", "🗡️|dagger", "⚔️|crossed swords", "🔫|gun", "🪃|boomerang", "🏹|bow", "🛡️|shield", "🪚|carpentry saw",
+                    "🔧|wrench", "🪛|screwdriver", "🔩|nut", "⚙️|gear", "🗜️|clamp", "⚖️|balance scale", "🦯|white cane", "🔗|link", "⛓️|chains", "🪝|hook", "🧰|toolbox", "🧲|magnet", "🪜|ladder", "⚗️|alembic",
+                    "🧪|test tube", "🧫|petri dish", "🧬|dna", "🔬|microscope", "🔭|telescope", "📡|satellite antenna", "💉|syringe", "🩸|blood", "💊|pill", "🩹|adhesive bandage", "🩺|stethoscope", "🚪|door",
+                    "🛗|elevator", "🪞|mirror", "🪟|window", "🛏️|bed", "🛋️|couch", "🪑|chair", "🚽|toilet", "🪠|plunger", "🚿|shower", "🛁|bathtub", "🪤|mouse trap", "🪒|razor", "🧴|lotion bottle", "🧷|safety pin",
+                    "🧹|broom", "🧺|basket", "🧻|roll of paper", "🪣|bucket", "🧼|soap", "🫧|bubbles", "🪥|toothbrush", "🧽|sponge", "🧯|fire extinguisher", "🛒|shopping cart", "🚬|cigarette", "⚰️|coffin",
+                    "🪦|headstone", "⚱️|funeral urn", "🧿|nazar amulet", "🪬|hamsa", "🗿|moai"
+                ],
+                'symbols': [
+                    "❤️|red heart love", "🧡|orange heart", "💛|yellow heart", "💚|green heart", "💙|blue heart", "💜|purple heart", "🖤|black heart", "🤍|white heart", "🤎|brown heart", "💔|broken heart", "💘|heart with arrow", "💝|heart with ribbon", "💖|sparkling heart", "💗|growing heart", "💓|beating heart", "💞|revolving hearts", "💕|two hearts", "💟|heart decoration", "❣️|heart exclamation", "💯|hundred points", "💢|anger symbol", "💥|collision", "💫|dizzy", "💦|sweat droplets", "💨|dashing away", "🕳️|hole", "💣|bomb", "💬|speech balloon", "👁️‍🗨️|eye in speech bubble", "🗨️|left speech bubble", "🗯️|right anger bubble", "💭|thought balloon", "💤|zzz sleep"
+                ],
+                'flags': [
+                    "🏁|checkered flag", "🚩|triangular flag", "🎌|crossed flags", "🏴|black flag", "🏳️|white flag", "🏳️‍🌈|rainbow flag pride", "🏳️‍⚧️|transgender flag",
+                    "🏴‍☠️|pirate flag", "🇺🇳|united nations", "🇦🇫|afghanistan", "🇦🇱|albania", "🇩🇿|algeria", "🇦🇸|american samoa", "🇦🇩|andorra", "🇦🇴|angola", "🇦🇮|anguilla", "🇦🇶|antarctica",
+                    "🇦🇬|antigua & barbuda", "🇦🇷|argentina", "🇦🇲|armenia", "🇦🇼|aruba", "🇦🇺|australia", "🇦🇹|austria", "🇦🇿|azerbaijan", "🇧🇸|bahamas", "🇧🇭|bahrain", "🇧🇩|bangladesh", "🇧🇧|barbados",
+                    "🇧🇾|belarus", "🇧🇪|belgium", "🇧🇿|belize", "🇧🇯|benin", "🇧🇲|bermuda", "🇧🇹|bhutan", "🇧🇴|bolivia", "🇧🇦|bosnia & herzegovina", "🇧🇼|botswana", "🇧🇷|brazil", "🇮🇴|british indian ocean territory",
+                    "🇻🇬|british virgin islands", "🇧🇳|brunei", "🇧🇬|bulgaria", "🇧🇫|burkina faso", "🇧🇮|burundi", "🇰🇭|cambodia", "🇨🇲|cameroon", "🇨🇦|canada", "🇮🇨|canary islands", "🇨🇻|cape verde",
+                    "🇧🇶|caribbean netherlands", "🇰🇾|cayman islands", "🇨🇫|central african republic", "🇹🇩|chad", "🇨🇱|chile", "🇨🇳|china", "🇨🇽|christmas island", "🇨🇨|cocos (keeling) islands",
+                    "🇨🇴|colombia", "🇰🇲|comoros", "🇨🇬|congo - brazzaville", "🇨🇩|congo - kinshasa", "🇨🇰|cook islands", "🇨🇷|costa rica", "🇨🇮|cote d’ivoire", "🇭🇷|croatia", "🇨🇺|cuba", "🇨🇼|curacao",
+                    "🇨🇾|cyprus", "🇨🇿|czechia", "🇩🇰|denmark", "🇩🇯|djibouti", "🇩🇲|dominica", "🇩🇴|dominican republic", "🇪🇨|ecuador", "🇪🇬|egypt", "🇸🇻|el salvador", "🇬🇶|equatorial guinea",
+                    "🇪🇷|eritrea", "🇪🇪|estonia", "🇸🇿|eswatini", "🇪🇹|ethiopia", "🇪🇺|european union", "🇫🇰|falkland islands", "🇫🇴|faroe islands", "🇫🇯|fiji", "🇫🇮|finland", "🇫🇷|france",
+                    "🇬🇫|french guiana", "🇵🇫|french polynesia", "🇹🇫|french southern territories", "🇬🇦|gabon", "🇬🇲|gambia", "🇬🇪|georgia", "🇩🇪|germany", "🇬🇭|ghana", "🇬🇮|gibraltar", "🇮🇳|india",
+                    "🇺🇸|usa united states", "🇬🇧|uk united kingdom", "🇯🇵|japan"
+                ]
+            };
+
+            const results = [];
+            Object.keys(dataset).forEach(group => {
+                dataset[group].forEach(entry => {
+                    const parts = entry.split('|');
+                    const char = parts[0];
+                    const keywords = parts[1] || ''; // Handle missing keywords
+
+                    results.push({
+                        character: char,
+                        unicodeName: keywords || char, // Fallback to char if no name
+                        slug: (keywords || char).replace(/ /g, '-'),
+                        group: group,
+                        subGroup: (group === 'flags') ? 'country-flag' : 'other'
+                    });
+                });
+            });
+            return results;
         }
 
         showCategory(categorySlug) {

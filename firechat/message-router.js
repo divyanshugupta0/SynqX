@@ -102,9 +102,9 @@ class MessageRouter {
                         pendingRef.off('value', listener);
                     }, 5 * 60 * 1000);
                 } else {
-                    // Message doesn't exist - might have been delivered already instantly
-                    console.log(`⚠️ Message ${messageId} not found in pending - may be delivered instantly`);
-                    // Mark as delivered anyway since recipient might have gotten it very fast
+                    // Message doesn't exist - it was picked up and removed by recipient instantly
+                    console.log(`✅ Message ${messageId} delivered instantly (fast cleanup)`);
+                    // Mark as delivered
                     if (window.fireflyChat && window.fireflyChat.updateMessageStatusIcon) {
                         window.fireflyChat.updateMessageStatusIcon(timestamp, 'delivered');
                     }

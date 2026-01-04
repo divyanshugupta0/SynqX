@@ -38,6 +38,18 @@
             this.pausedDuration = 0; // Timer state when paused
             this.connectionQuality = 'good'; // good, slow, poor
 
+            // Call timeout for unanswered calls
+            this.callTimeoutTimer = null;
+            this.callTimeoutDuration = 45000; // 45 seconds to answer before auto-hangup
+            this.ringTimeoutTimer = null;
+            this.ringTimeoutDuration = 60000; // 60 seconds of ringing before auto-decline
+
+            // Mobile speaker control
+            this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            this.isSpeakerOn = !this.isMobile; // Default: earpiece on mobile, speaker on desktop
+            this.remoteAudio = null; // Audio element for remote stream
+            this.proximityEnabled = false; // Proximity sensor enabled
+
             // STUN/TURN servers for WebRTC
             this.iceServers = {
                 iceServers: [
@@ -56,6 +68,32 @@
 
             // Make startAudioCall globally available
             window.startAudioCall = () => this.initiateCall();
+
+            // Hide screen share button on iOS (not supported)
+            this.hideScreenShareOnIOS();
+        }
+
+        /**
+         * Check if device is iOS
+         */
+        isIOS() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        }
+
+        /**
+         * Hide screen share button on iOS devices
+         */
+        hideScreenShareOnIOS() {
+            if (this.isIOS()) {
+                // Wait for popup to be created
+                setTimeout(() => {
+                    const shareBtn = this.callPopup?.querySelector('.call-action-btn[title="Share screen"]');
+                    if (shareBtn) {
+                        shareBtn.style.display = 'none';
+                    }
+                }, 100);
+            }
         }
 
         /**
@@ -171,6 +209,10 @@
                             <i class="material-icons">mic</i>
                             <span class="control-dropdown"><i class="material-icons">expand_more</i></span>
                         </button>
+                        <!-- Speaker Toggle (Mobile only) -->
+                        <button class="call-control-btn mobile-only-btn" id="btn-speaker" onclick="window.audioCallManager.toggleSpeaker()" title="Speaker">
+                            <i class="material-icons">hearing</i>
+                        </button>
                     </div>
                     
                     <div class="call-actions-row">
@@ -197,6 +239,10 @@
                 <div class="call-popup-footer call-incoming-footer" id="incoming-controls" style="display: none;">
                     <div class="call-incoming-text">Incoming voice call</div>
                     <div class="call-incoming-actions">
+                        <!-- Maximize Button (shown in minimized mode) -->
+                        <button class="call-control-btn minimized-maximize-btn" onclick="window.audioCallManager.toggleMinimize()" title="Maximize">
+                            <i class="material-icons">open_in_full</i>
+                        </button>
                         <button class="call-decline-btn" onclick="window.audioCallManager.endCall()" title="Decline">
                             <i class="material-icons">call_end</i>
                         </button>
@@ -366,10 +412,36 @@
             callsRef.on('child_added', async (snapshot) => {
                 const callData = snapshot.val();
                 if (callData && callData.type === 'offer') {
-                    // Check if already in a call
-                    if (this.callState !== 'idle') {
+                    // Check if this is a stale/old call (more than 60s old)
+                    const callAge = Date.now() - (callData.timestamp || 0);
+                    if (callAge > 60000) {
+                        console.log('Ignoring stale call data (>60s old)');
+                        // Clean up stale call data
+                        firebase.database().ref(`calls/${this.currentUser.uid}/${snapshot.key}`).remove();
+                        return;
+                    }
+
+                    // Check if we just ended a call - prevent race condition with 2 second cooldown
+                    if (this.lastCallEndTime && (Date.now() - this.lastCallEndTime) < 2000) {
+                        console.log('Ignoring call - cooldown after previous call end');
+                        return;
+                    }
+
+                    // Check if this is the same call ID that was just processed (prevent double-processing)
+                    if (this.lastProcessedCallId === snapshot.key) {
+                        console.log('Ignoring duplicate call ID:', snapshot.key);
+                        return;
+                    }
+
+                    // Check if already in a call (but not if state is 'ended' or getting stuck)
+                    const isActuallyBusy = this.callState !== 'idle' &&
+                        this.callState !== 'ended' &&
+                        this.callId !== null &&
+                        this.callId !== snapshot.key; // Don't consider busy if it's same call
+
+                    if (isActuallyBusy) {
                         // User is busy - send busy signal and remove call data
-                        console.log('User is busy, declining call');
+                        console.log('User is busy, declining call. State:', this.callState);
 
                         // Get caller info for notification
                         const callerSnapshot = await firebase.database().ref(`users/${callData.from}`).once('value');
@@ -389,6 +461,9 @@
 
                         return;
                     }
+
+                    // Track this call ID to prevent double-processing
+                    this.lastProcessedCallId = snapshot.key;
 
                     this.handleIncomingCall(snapshot.key, callData);
                 }
@@ -412,6 +487,12 @@
 
             this.showCallPopup('incoming');
             this.playRingtone();
+
+            // Listen for call end (in case caller hangs up before we answer)
+            this.listenForCallEnd();
+
+            // Start ring timeout - auto-decline if not answered
+            this.startRingTimeout();
         }
 
         async initiateCall() {
@@ -470,6 +551,9 @@
                 // Listen for call termination from other side
                 this.listenForCallEnd();
 
+                // Start call timeout - auto-hangup if not answered
+                this.startCallTimeout();
+
             } catch (error) {
                 console.error('Call initiation error:', error);
                 this.showNotification('Could not start call: ' + error.message, 'error');
@@ -500,6 +584,25 @@
                     const remoteAudio = document.getElementById('remote-audio');
                     if (remoteAudio) {
                         remoteAudio.srcObject = event.streams[0];
+
+                        // Store reference for speaker control
+                        this.remoteAudio = remoteAudio;
+
+                        // Set initial speaker mode (earpiece on mobile)
+                        this.setSpeakerMode(this.isSpeakerOn);
+
+                        // Update speaker button state
+                        const speakerBtn = document.getElementById('btn-speaker');
+                        if (speakerBtn && this.isMobile) {
+                            const icon = speakerBtn.querySelector('i.material-icons');
+                            if (this.isSpeakerOn) {
+                                speakerBtn.classList.add('active');
+                                icon.textContent = 'volume_up';
+                            } else {
+                                speakerBtn.classList.remove('active');
+                                icon.textContent = 'hearing';
+                            }
+                        }
                     }
                 } else if (event.track.kind === 'video') {
                     // Video track - screen share from remote user
@@ -674,10 +777,23 @@
                     this.updateCallStatus('User is busy...');
                     this.showNotification(data.busyMessage || 'User is on another call', 'info');
 
-                    // End call after 3 seconds
+                    // End call after 2 seconds
                     setTimeout(() => {
                         this.endCall();
-                    }, 3000);
+                    }, 2000);
+                    return;
+                }
+
+                // Check if call was declined
+                if (data && data.declined) {
+                    console.log('Call was declined');
+                    this.updateCallStatus('Call declined');
+                    this.showNotification('Call declined', 'info');
+
+                    // End call after 2 seconds
+                    setTimeout(() => {
+                        this.endCall();
+                    }, 2000);
                     return;
                 }
 
@@ -745,6 +861,59 @@
             this.iceCandidateQueue = [];
         }
 
+        /**
+         * Start timeout for outgoing calls - auto-hangup if not answered
+         */
+        startCallTimeout() {
+            this.clearCallTimeouts();
+
+            this.callTimeoutTimer = setTimeout(() => {
+                if (this.callState === 'calling' || this.callState === 'connecting') {
+                    console.log('⏰ Call timeout - no answer');
+                    this.showNotification('No answer', 'info');
+                    this.updateCallStatus('No answer');
+
+                    // Wait 2 seconds to show the status, then end
+                    setTimeout(() => {
+                        this.endCall();
+                    }, 2000);
+                }
+            }, this.callTimeoutDuration);
+
+            console.log(`⏰ Call timeout started: ${this.callTimeoutDuration / 1000}s`);
+        }
+
+        /**
+         * Start timeout for incoming calls - auto-decline if not answered
+         */
+        startRingTimeout() {
+            this.clearCallTimeouts();
+
+            this.ringTimeoutTimer = setTimeout(() => {
+                if (this.callState === 'ringing') {
+                    console.log('⏰ Ring timeout - missed call');
+                    this.showNotification('Missed call', 'info');
+                    this.endCall();
+                }
+            }, this.ringTimeoutDuration);
+
+            console.log(`⏰ Ring timeout started: ${this.ringTimeoutDuration / 1000}s`);
+        }
+
+        /**
+         * Clear all call timeouts
+         */
+        clearCallTimeouts() {
+            if (this.callTimeoutTimer) {
+                clearTimeout(this.callTimeoutTimer);
+                this.callTimeoutTimer = null;
+            }
+            if (this.ringTimeoutTimer) {
+                clearTimeout(this.ringTimeoutTimer);
+                this.ringTimeoutTimer = null;
+            }
+        }
+
 
         // Listen for call termination from the other party
         listenForCallEnd() {
@@ -785,6 +954,22 @@
         // End call locally without trying to remove Firebase data
         endCallLocally() {
             console.log('Ending call locally...');
+
+            // IMMEDIATELY reset state so user is not considered "busy" during cleanup
+            const wasCallState = this.callState;
+            const wasCallId = this.callId;
+            const wasInitiator = this.isInitiator;
+            const wasDuration = this.callDuration;
+
+            this.callState = 'idle';
+            this.callId = null;
+
+            // Set cooldown timestamp to prevent race conditions
+            this.lastCallEndTime = Date.now();
+            this.lastProcessedCallId = null;
+
+            // Clear call timeouts first
+            this.clearCallTimeouts();
 
             // Stop screen sharing if active
             if (this.screenStream) {
@@ -827,16 +1012,17 @@
                 this.renegotiateListenerRef = null;
             }
 
+
             // Save call log if not already saved (avoid duplicates?)
-            // If remote ended it, we should log it.
-            if (this.callState !== 'idle') {
-                const type = this.isInitiator ? 'outgoing' : 'incoming';
+            // If remote ended it, we should log it. Use saved values since we reset state at start.
+            if (wasCallState !== 'idle') {
+                const type = wasInitiator ? 'outgoing' : 'incoming';
                 let status = 'completed';
-                if (this.callDuration === 0) {
+                if (wasDuration === 0) {
                     // If duration 0 and remote ended, it's either declined or missed (if incoming) or just cancelled (if outgoing)
                     // If I am initiator and remote ended -> Declined.
                     // If I am receiver and remote ended -> Missed (if I didn't answer yet?) or Cancelled by caller.
-                    if (this.isInitiator) status = 'declined';
+                    if (wasInitiator) status = 'declined';
                     else status = 'missed'; // simplified
                 }
                 this.saveCallLog(type, status);
@@ -849,9 +1035,11 @@
             // Stop connection monitoring
             this.stopConnectionMonitoring();
 
-            // FULL STATE RESET
-            this.callState = 'idle';
-            this.callId = null;
+            // Cleanup proximity sensor
+            this.cleanupProximitySensor();
+            this.remoteAudio = null;
+
+            // Reset remaining state (callState and callId already reset at start)
             this.isMuted = false;
             this.remoteScreenActive = false;
             this.isHandRaised = false;
@@ -891,6 +1079,7 @@
 
         async acceptCall() {
             this.stopRingtone();
+            this.clearCallTimeouts(); // Clear ring timeout since call is being accepted
             this.callState = 'connecting';
             this.updateCallStatus('Connecting...');
 
@@ -970,6 +1159,9 @@
                 incomingControls.style.display = 'none';
                 incomingControls.style.visibility = 'hidden';
             }
+
+            // Setup proximity sensor for auto speaker switching (mobile)
+            this.setupProximitySensor();
         }
 
         startTimer() {
@@ -1083,6 +1275,9 @@
             if (!this.isReconnecting && this.callState === 'connected') return;
 
             console.log('✅ Connection restored!');
+
+            // Clear all call timeouts - call is connected!
+            this.clearCallTimeouts();
 
             // Clear reconnect timeout
             if (this.reconnectTimeout) {
@@ -1334,6 +1529,173 @@
             }
         }
 
+        /**
+         * Toggle speaker/earpiece mode (mobile only)
+         */
+        toggleSpeaker() {
+            this.isSpeakerOn = !this.isSpeakerOn;
+            this.setSpeakerMode(this.isSpeakerOn);
+
+            // Update button UI
+            const speakerBtn = document.getElementById('btn-speaker');
+            if (speakerBtn) {
+                const icon = speakerBtn.querySelector('i.material-icons');
+                if (this.isSpeakerOn) {
+                    speakerBtn.classList.add('active');
+                    icon.textContent = 'volume_up'; // Speaker icon
+                    speakerBtn.title = 'Switch to earpiece';
+                } else {
+                    speakerBtn.classList.remove('active');
+                    icon.textContent = 'hearing'; // Earpiece icon
+                    speakerBtn.title = 'Switch to speaker';
+                }
+            }
+
+            this.showNotification(this.isSpeakerOn ? 'Speaker on' : 'Earpiece mode', 'info');
+        }
+
+        /**
+         * Set speaker mode for remote audio
+         * Note: Web Audio API has limited control over output device
+         * We use volume boost and attempt setSinkId where available
+         */
+        setSpeakerMode(speakerOn) {
+            if (!this.remoteAudio) return;
+
+            try {
+                // Method 1: Try to use setSinkId (Chrome/Edge on desktop, limited mobile support)
+                if (typeof this.remoteAudio.setSinkId === 'function') {
+                    // List available audio outputs
+                    navigator.mediaDevices.enumerateDevices()
+                        .then(devices => {
+                            const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
+                            console.log('Available audio outputs:', audioOutputs.map(d => d.label));
+
+                            // On mobile, typically only one output is available
+                            // But we can try to find speaker vs earpiece
+                            const speakerDevice = audioOutputs.find(d =>
+                                d.label.toLowerCase().includes('speaker') ||
+                                d.label.toLowerCase().includes('speakerphone')
+                            );
+                            const earpieceDevice = audioOutputs.find(d =>
+                                d.label.toLowerCase().includes('earpiece') ||
+                                d.label.toLowerCase().includes('phone')
+                            );
+
+                            const targetDevice = speakerOn
+                                ? (speakerDevice || audioOutputs[audioOutputs.length - 1])
+                                : (earpieceDevice || audioOutputs[0]);
+
+                            if (targetDevice) {
+                                this.remoteAudio.setSinkId(targetDevice.deviceId)
+                                    .then(() => console.log('Audio output set to:', targetDevice.label))
+                                    .catch(e => console.warn('Could not set audio output:', e));
+                            }
+                        })
+                        .catch(e => console.warn('Could not enumerate devices:', e));
+                }
+
+                // Method 2: Adjust volume as fallback feedback
+                // Earpiece mode = slightly lower volume for privacy
+                this.remoteAudio.volume = speakerOn ? 1.0 : 0.7;
+
+            } catch (e) {
+                console.warn('Speaker mode error:', e);
+            }
+        }
+
+        /**
+         * Setup proximity sensor for auto speaker switching
+         */
+        setupProximitySensor() {
+            if (!this.isMobile) return;
+
+            // Try the Proximity Events API (deprecated but may work on some devices)
+            if ('ondeviceproximity' in window) {
+                window.addEventListener('deviceproximity', this.handleProximity.bind(this));
+                this.proximityEnabled = true;
+                console.log('📱 Proximity sensor enabled (deviceproximity)');
+            }
+            // Try the newer Sensor API
+            else if ('ProximitySensor' in window) {
+                try {
+                    const sensor = new ProximitySensor();
+                    sensor.addEventListener('reading', () => {
+                        this.handleProximityReading(sensor.distance);
+                    });
+                    sensor.start();
+                    this.proximitySensor = sensor;
+                    this.proximityEnabled = true;
+                    console.log('📱 Proximity sensor enabled (ProximitySensor API)');
+                } catch (e) {
+                    console.warn('ProximitySensor not available:', e);
+                }
+            }
+            // Alternative: Use light sensor as proximity approximation
+            else if ('AmbientLightSensor' in window) {
+                try {
+                    const sensor = new AmbientLightSensor();
+                    sensor.addEventListener('reading', () => {
+                        // Very low light = phone near face
+                        const isNear = sensor.illuminance < 10;
+                        if (isNear && this.isSpeakerOn) {
+                            this.toggleSpeaker(); // Switch to earpiece
+                        }
+                    });
+                    sensor.start();
+                    this.lightSensor = sensor;
+                    console.log('📱 Using light sensor as proximity approximation');
+                } catch (e) {
+                    console.warn('AmbientLightSensor not available:', e);
+                }
+            }
+        }
+
+        /**
+         * Handle proximity event (deprecated API)
+         */
+        handleProximity(event) {
+            const isNear = event.near || (event.value < 5); // Near = < 5cm typically
+
+            if (isNear && this.isSpeakerOn) {
+                // Phone near ear - switch to earpiece
+                this.toggleSpeaker();
+            } else if (!isNear && !this.isSpeakerOn && this.callState === 'connected') {
+                // Phone away from ear - switch to speaker (optional)
+                // Uncomment if you want auto-switch back to speaker
+                // this.toggleSpeaker();
+            }
+        }
+
+        /**
+         * Handle proximity reading (new Sensor API)
+         */
+        handleProximityReading(distance) {
+            const isNear = distance !== null && distance < 5;
+
+            if (isNear && this.isSpeakerOn) {
+                this.toggleSpeaker();
+            }
+        }
+
+        /**
+         * Cleanup proximity sensor
+         */
+        cleanupProximitySensor() {
+            if ('ondeviceproximity' in window) {
+                window.removeEventListener('deviceproximity', this.handleProximity);
+            }
+            if (this.proximitySensor) {
+                this.proximitySensor.stop();
+                this.proximitySensor = null;
+            }
+            if (this.lightSensor) {
+                this.lightSensor.stop();
+                this.lightSensor = null;
+            }
+            this.proximityEnabled = false;
+        }
+
         async sendCallEvent(type, payload) {
             if (!this.callId || !this.currentPeer) return;
 
@@ -1438,6 +1800,18 @@
         }
 
         async shareScreen() {
+            // Check if screen sharing is supported
+            // iOS does not support getDisplayMedia at all
+            // Android Chrome 10+ supports it
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+                if (this.isIOS()) {
+                    this.showNotification('Screen sharing is not supported on iOS devices', 'error');
+                } else {
+                    this.showNotification('Screen sharing is not supported on this device/browser', 'error');
+                }
+                return;
+            }
+
             if (!this.peerConnection || this.callState !== 'connected') {
                 this.showNotification('Must be in an active call to share screen', 'error');
                 return;
@@ -1681,7 +2055,24 @@
         endCall() {
             console.log('Ending call...');
 
-            // Turn off Firebase listeners first to prevent race conditions
+            // IMMEDIATELY save state and reset so user is not "busy" during cleanup
+            const savedCallId = this.callId;
+            const savedCallState = this.callState;
+            const savedIsInitiator = this.isInitiator;
+            const savedCallDuration = this.callDuration;
+            const savedCurrentPeer = this.currentPeer;
+
+            this.callState = 'idle';
+            this.callId = null;
+
+            // Set cooldown timestamp to prevent race conditions
+            this.lastCallEndTime = Date.now();
+            this.lastProcessedCallId = null;
+
+            // Clear call timeouts first
+            this.clearCallTimeouts();
+
+            // Turn off ALL Firebase listeners to prevent race conditions
             if (this.callEndListenerRef) {
                 this.callEndListenerRef.off();
                 this.callEndListenerRef = null;
@@ -1689,6 +2080,18 @@
             if (this.eventsListenerRef) {
                 this.eventsListenerRef.off();
                 this.eventsListenerRef = null;
+            }
+            if (this.answerListenerRef) {
+                this.answerListenerRef.off();
+                this.answerListenerRef = null;
+            }
+            if (this.candidatesListenerRef) {
+                this.candidatesListenerRef.off();
+                this.candidatesListenerRef = null;
+            }
+            if (this.renegotiateListenerRef) {
+                this.renegotiateListenerRef.off();
+                this.renegotiateListenerRef = null;
             }
 
             // Stop screen sharing if active
@@ -1710,19 +2113,46 @@
                 this.peerConnection = null;
             }
 
+            // Cleanup proximity sensor and audio refs
+            this.cleanupProximitySensor();
+            this.remoteAudio = null;
+
             // Cleanup Firebase - this will trigger the other party's listener
-            if (this.callId && this.currentUser) {
-                firebase.database().ref(`calls/${this.currentUser.uid}/${this.callId}`).remove();
-                if (this.currentPeer) {
-                    firebase.database().ref(`calls/${this.currentPeer.uid}/${this.callId}`).remove();
+            // Use saved values from start of function
+            if (savedCallId && this.currentUser) {
+                // If receiver is declining (not initiator), notify the caller first
+                if (!savedIsInitiator && savedCurrentPeer) {
+                    // Set declined flag so caller knows the call was declined
+                    firebase.database().ref(`calls/${this.currentUser.uid}/${savedCallId}`).update({
+                        declined: true,
+                        declinedAt: Date.now()
+                    }).then(() => {
+                        // Small delay to ensure caller receives the update
+                        setTimeout(() => {
+                            firebase.database().ref(`calls/${this.currentUser.uid}/${savedCallId}`).remove();
+                            firebase.database().ref(`calls/${savedCurrentPeer.uid}/${savedCallId}`).remove();
+                        }, 200);
+                    }).catch(() => {
+                        // If update fails, just remove
+                        firebase.database().ref(`calls/${this.currentUser.uid}/${savedCallId}`).remove();
+                        if (savedCurrentPeer) {
+                            firebase.database().ref(`calls/${savedCurrentPeer.uid}/${savedCallId}`).remove();
+                        }
+                    });
+                } else {
+                    // Initiator cancelling - just remove both
+                    firebase.database().ref(`calls/${this.currentUser.uid}/${savedCallId}`).remove();
+                    if (savedCurrentPeer) {
+                        firebase.database().ref(`calls/${savedCurrentPeer.uid}/${savedCallId}`).remove();
+                    }
                 }
             }
 
-            // Save call log (I ended call)
-            const type = this.isInitiator ? 'outgoing' : 'incoming';
+            // Save call log (I ended call) - use saved values
+            const type = savedIsInitiator ? 'outgoing' : 'incoming';
             let status = 'completed';
-            if (this.callDuration === 0) {
-                status = this.isInitiator ? 'cancelled' : 'declined';
+            if (savedCallDuration === 0) {
+                status = savedIsInitiator ? 'cancelled' : 'declined';
             }
             this.saveCallLog(type, status);
 
@@ -1730,9 +2160,7 @@
             this.stopTimer();
             this.stopRingtone();
 
-            // Reset state
-            this.callState = 'idle';
-            this.callId = null;
+            // Reset remaining state (callState and callId already reset at start)
             this.isMuted = false;
             this.remoteScreenActive = false;
             this.isHandRaised = false;

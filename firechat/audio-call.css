@@ -23,16 +23,17 @@
 /* Minimized State */
 /* Minimized State */
 .audio-call-popup.minimized {
-    width: auto;
-    min-width: 320px;
+    width: fit-content;
+    min-width: 260px;
+    max-width: 380px;
     height: 70px;
     min-height: 0;
     border-radius: 35px;
-    padding: 0 10px;
+    padding: 0 12px;
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 10px;
     cursor: grab;
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
@@ -54,7 +55,7 @@
     flex-direction: row;
     align-items: center;
     padding: 0;
-    flex: 1;
+    flex-shrink: 0;
     justify-content: flex-start;
     min-height: 0;
     overflow: hidden;
@@ -93,7 +94,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 120px;
+    max-width: 180px;
 }
 
 .audio-call-popup.minimized .call-status {
@@ -106,42 +107,81 @@
     margin-top: 2px;
 }
 
-/* Footer: Row layout for specific buttons */
+/* Footer: Row layout for specific buttons - aligned to right */
+/* NOTE: display must NOT use !important so JS can hide with inline display:none */
 .audio-call-popup.minimized .call-popup-footer {
-    display: flex;
-    flex-direction: row;
-    padding: 0;
-    background: transparent;
-    gap: 8px;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    padding: 0 !important;
+    margin-left: auto !important;
+    background: transparent !important;
+    gap: 8px !important;
+    flex-shrink: 0 !important;
 }
 
 .audio-call-popup.minimized .call-controls-row {
-    width: auto;
-    gap: 10px;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    width: auto !important;
+    gap: 8px !important;
 }
 
 /* Hide unnecessary buttons */
 .audio-call-popup.minimized .call-actions-row,
 .audio-call-popup.minimized #btn-camera,
 .audio-call-popup.minimized .control-dropdown,
-.audio-call-popup.minimized .call-incoming-text,
-.audio-call-popup.minimized .call-decline-btn {
+.audio-call-popup.minimized .call-incoming-text {
     display: none !important;
 }
 
-/* Adjust button sizes */
-.audio-call-popup.minimized .call-control-btn,
-.audio-call-popup.minimized .call-end-btn,
-.audio-call-popup.minimized .call-accept-btn {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
+/* Show incoming call actions (accept/decline/maximize) in minimized mode */
+/* NOTE: display must NOT use !important so JS can hide with inline display:none */
+.audio-call-popup.minimized .call-incoming-footer {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    padding: 0 !important;
+    margin-left: auto !important;
+    background: transparent !important;
+    gap: 8px !important;
+    flex-shrink: 0 !important;
 }
 
+.audio-call-popup.minimized .call-incoming-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin: 0 !important;
+}
+
+/* ALL buttons same size in minimized mode - 42px */
+.audio-call-popup.minimized .call-control-btn,
+.audio-call-popup.minimized .call-end-btn,
+.audio-call-popup.minimized .call-accept-btn,
+.audio-call-popup.minimized .call-decline-btn,
+.audio-call-popup.minimized .minimized-maximize-btn {
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    min-height: 42px !important;
+    max-width: 42px !important;
+    max-height: 42px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* ALL button icons same size - 20px */
 .audio-call-popup.minimized .call-control-btn i,
 .audio-call-popup.minimized .call-end-btn i,
-.audio-call-popup.minimized .call-accept-btn i {
-    font-size: 20px;
+.audio-call-popup.minimized .call-accept-btn i,
+.audio-call-popup.minimized .call-decline-btn i,
+.audio-call-popup.minimized .minimized-maximize-btn i {
+    font-size: 20px !important;
 }
 
 /* ========== Header ========== */
@@ -710,6 +750,33 @@
         -webkit-tap-highlight-color: rgba(255, 255, 255, 0.2);
         touch-action: manipulation;
     }
+
+    /* 
+     * Screen sharing on mobile:
+     * - Android Chrome (10+): Works via getDisplayMedia
+     * - iOS Safari/Chrome: Not supported (no getDisplayMedia)
+     * We'll handle iOS detection in JavaScript instead
+     */
+
+    /* Show speaker button on mobile */
+    .mobile-only-btn {
+        display: flex !important;
+    }
+}
+
+/* Hide mobile-only buttons on desktop */
+.mobile-only-btn {
+    display: none;
+}
+
+/* Speaker button active state (when speaker is on) */
+#btn-speaker.active {
+    background: rgba(0, 168, 132, 0.3);
+    border-color: #00a884;
+}
+
+#btn-speaker.active i {
+    color: #00a884;
 }
 
 /* ========== Animation ========== */
