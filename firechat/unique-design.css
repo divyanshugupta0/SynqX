@@ -148,11 +148,10 @@ body {
 .chat-contacts {
     grid-area: contacts;
     background: var(--bg-sidebar);
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
     display: flex;
     flex-direction: column;
     position: relative;
-    /* Ensure Panels can slide over this if needed, or be part of it */
     overflow: hidden;
 }
 
@@ -163,11 +162,10 @@ body {
     left: 0;
     width: 100%;
     height: 100vh;
-    /* Auto-adjust to screen height */
     background: var(--bg-sidebar);
     z-index: 50;
     transform: translateX(-110%);
-    transition: transform 0.3s cubic-bezier(0.3, 0, 0, 1);
+    transition: transform 0.3s cubic-bezier(0.2, 0, 0.2, 1);
     display: flex;
     flex-direction: column;
     border-right: 1px solid rgba(255, 255, 255, 0.05);
@@ -189,52 +187,83 @@ body {
 
 /* Contacts Header Area (Search) */
 .contacts-search {
-    margin: 12px;
-    padding: 8px 16px;
+    margin: 16px;
+    padding: 10px 16px;
     background: #202c33;
-    border: none;
-    border-radius: 8px;
+    border: 1px solid transparent;
+    border-radius: 20px;
     color: var(--text-primary);
     font-size: 14px;
-    height: 40px;
+    height: 42px;
     width: auto;
+    transition: all 0.2s;
 }
 
 .contacts-search:focus {
     outline: none;
     background: #2a3942;
+    border-color: rgba(0, 168, 132, 0.5);
+    box-shadow: 0 0 0 4px rgba(0, 168, 132, 0.1);
 }
 
 #contacts-list {
     overflow-y: auto;
     flex: 1;
+    padding: 0 8px 10px 8px;
+    /* Add side padding for detached items */
 }
 
 .contact-item {
-    padding: 12px 16px;
+    padding: 12px 14px;
     display: flex;
     align-items: center;
     gap: 16px;
     cursor: pointer;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-    transition: background 0.2s;
+    border-radius: 12px;
+    margin-bottom: 4px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid transparent;
+    /* Prevent layout shift on border change */
+    position: relative;
+    overflow: hidden;
+    /* For ripple effect if added later */
 }
 
 .contact-item:hover {
-    background: #2a3942;
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .contact-item.active {
-    background: #2a3942;
+    background: rgba(0, 168, 132, 0.1);
+    /* Low opacity accent */
+}
+
+.contact-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 60%;
+    background: var(--accent);
+    border-radius: 0 4px 4px 0;
 }
 
 .contact-avatar {
-    width: 50px;
-    height: 50px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     background: #6b7280;
     overflow: hidden;
     flex-shrink: 0;
+    position: relative;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.contact-item.active .contact-avatar {
+    border-color: var(--accent);
 }
 
 .contact-avatar img {
@@ -249,12 +278,14 @@ body {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    justify-content: center;
 }
 
 .contact-name {
     font-weight: 500;
-    font-size: 16px;
+    font-size: 15.5px;
     color: var(--text-primary);
+    line-height: 1.2;
 }
 
 .contact-status {
@@ -263,24 +294,42 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    line-height: 1.2;
+}
+
+.contact-item:hover .contact-status {
+    color: rgba(255, 255, 255, 0.7);
 }
 
 /* Unread Badge */
 .unread-badge {
-    background: var(--accent);
-    color: #000;
+    background: linear-gradient(135deg, #00a884, #00d995);
+    color: #0b141a;
     font-weight: 700;
-    border-radius: 50%;
+    border-radius: 12px;
     min-width: 20px;
     height: 20px;
+    padding: 0 6px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 11px;
     flex-shrink: 0;
-    margin-right: 35px;
-    /* Space for menu button */
+    margin-right: 30px;
+    /* Space for menu */
+    box-shadow: 0 2px 5px rgba(0, 168, 132, 0.4);
     z-index: 1;
+    animation: scaleIn 0.2s ease-out;
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0);
+    }
+
+    to {
+        transform: scale(1);
+    }
 }
 
 /* =================================================================
@@ -614,7 +663,8 @@ body {
 }
 
 .input-btn,
-.send-btn {
+.send-btn,
+.icon-btn {
     background: transparent;
     border: none;
     color: var(--text-secondary);
@@ -626,7 +676,8 @@ body {
     justify-content: center;
 }
 
-.input-btn:hover {
+.input-btn:hover,
+.icon-btn:hover {
     background: rgba(255, 255, 255, 0.05);
     color: var(--text-primary);
 }

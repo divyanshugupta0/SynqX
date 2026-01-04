@@ -223,14 +223,30 @@
                     </div>
                     <div class="menu-item" onclick="toggleMainMenu();"><i class="material-icons">star_border</i> Starred
                         messages</div>
-                    <div class="menu-item" onclick="toggleMainMenu();"><i
+                    <div class="menu-item" onclick="toggleSelectionMode(true); toggleMainMenu();"><i
                             class="material-icons">check_box_outline_blank</i> Select chats</div>
+
                     <div class="menu-item" onclick="openSettingsModal(); toggleMainMenu();"><i
                             class="material-icons">settings</i> Settings
                     </div>
                     <div class="menu-item" onclick="confirmLogout(); toggleMainMenu();"><i
                             class="material-icons">logout</i> Log out</div>
                 </div>
+            </div>
+
+            <!-- Selection Header (Hidden by default) -->
+            <div id="contacts-selection-header" class="contacts-header"
+                style="display: none; padding: 20px 16px 16px; align-items: center; justify-content: space-between; background: #0b141a; height: 72px;">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <button class="icon-btn" onclick="toggleSelectionMode(false)"><i
+                            class="material-icons">close</i></button>
+                    <h1 id="selection-count" style="font-size: 18px; font-weight: 600; margin: 0; color: #e9edef;">0
+                        selected</h1>
+                </div>
+                <button class="icon-btn" id="delete-selected-btn" onclick="confirmDeleteSelected()" title="Delete"
+                    style="display: none;">
+                    <i class="material-icons">delete</i>
+                </button>
             </div>
 
             <!-- Search -->
@@ -377,10 +393,44 @@
 
         <!-- CALLS PANEL (Sidebar Panel) -->
         <div id="calls-modal" class="sidebar-panel">
-            <div class="sidebar-panel-header">
-                <i class="material-icons" onclick="closeCallsModal()"
-                    style="cursor: pointer; color: #8696a0;">arrow_back</i>
-                <div>Calls</div>
+            <!-- Normal Header -->
+            <div id="calls-normal-header" class="sidebar-panel-header" style="justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <i class="material-icons" onclick="closeCallsModal()"
+                        style="cursor: pointer; color: #8696a0;">arrow_back</i>
+                    <div>Calls</div>
+                </div>
+                <div style="position: relative;">
+                    <button class="icon-btn" onclick="window.audioCallManager.toggleCallsMenu()" title="Menu">
+                        <i class="material-icons">more_vert</i>
+                    </button>
+                    <!-- Calls Menu Dropdown -->
+                    <div id="calls-menu-dropdown" class="dropdown-menu" style="display: none; top: 40px; right: 0;">
+                        <div class="menu-item"
+                            onclick="window.audioCallManager.toggleCallSelectionMode(true); window.audioCallManager.toggleCallsMenu();">
+                            <i class="material-icons">check_box_outline_blank</i> Select calls
+                        </div>
+                        <div class="menu-item"
+                            onclick="window.audioCallManager.confirmClearAllCallHistory(); window.audioCallManager.toggleCallsMenu();">
+                            <i class="material-icons">delete_sweep</i> Clear all call log
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Selection Header (Hidden by default) -->
+            <div id="calls-selection-header" class="sidebar-panel-header"
+                style="display: none; background: #0b141a; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <button class="icon-btn" onclick="window.audioCallManager.toggleCallSelectionMode(false)"><i
+                            class="material-icons">close</i></button>
+                    <div id="calls-selection-count" style="font-size: 16px; font-weight: 600;">0 selected</div>
+                </div>
+                <button class="icon-btn" id="delete-selected-calls-btn"
+                    onclick="window.audioCallManager.confirmDeleteSelectedCalls()" title="Delete"
+                    style="display: none;">
+                    <i class="material-icons">delete</i>
+                </button>
             </div>
 
             <div class="sidebar-panel-content">

@@ -8,6 +8,8 @@ class FireflyChat {
         this.messages = new Map();
         this.contacts = new Map();
         this.isConnected = false;
+        this.isSelectionMode = false;
+        this.selectedChats = new Set();
 
         this.init();
     }
@@ -41,6 +43,12 @@ class FireflyChat {
         this.loadFavourites();
 
         console.log('✅ FireFly Chat initialized successfully');
+
+        // Expose global functions for HTML access
+        window.toggleMainMenu = () => this.toggleMainMenu();
+        window.toggleSelectionMode = (enable) => this.toggleSelectionMode(enable);
+        window.confirmClearAllHistory = () => this.confirmClearAllHistory();
+        window.confirmDeleteSelected = () => this.confirmDeleteSelected();
 
         // Hide App Loader
         setTimeout(() => {
@@ -2020,28 +2028,41 @@ gap: 8px;
 
         contactsList.innerHTML = '';
 
-        // Sort contacts: 
-        // 1. Contacts with unread messages first (sorted by most recent)
-        // 2. Then contacts without unread messages (sorted by most recent)
+        // Sort contacts
         const sortedContacts = Array.from(this.contacts.entries()).sort((a, b) => {
             const unreadA = this.unreadCounts ? (this.unreadCounts.get(a[0]) || 0) : 0;
             const unreadB = this.unreadCounts ? (this.unreadCounts.get(b[0]) || 0) : 0;
 
-            // First priority: Unread messages (contacts with unread come first)
             if (unreadA > 0 && unreadB === 0) return -1;
             if (unreadB > 0 && unreadA === 0) return 1;
 
-            // Second priority: lastMessageTime (most recent first)
             const timeA = a[1].lastMessageTime || 0;
             const timeB = b[1].lastMessageTime || 0;
             return timeB - timeA;
         });
 
+        if (sortedContacts.length === 0) {
+            contactsList.innerHTML = `
+                <div style="text-align: center; margin-top: 40px; color: #8696a0; font-size: 14px;">
+                    <i class="material-icons" style="font-size: 48px; opacity: 0.5; margin-bottom: 10px;">chat_bubble_outline</i>
+                    <div>No chats yet</div>
+                    <div style="font-size: 13px; margin-top: 5px;">Start a new one!</div>
+                </div>`;
+            return;
+        }
+
         sortedContacts.forEach(([uid, contact]) => {
             const contactDiv = document.createElement('div');
             contactDiv.className = 'contact-item';
-            if (this.currentPeer && this.currentPeer.uid === uid) {
+
+            // Active state only if NOT in selection mode
+            if (!this.isSelectionMode && this.currentPeer && this.currentPeer.uid === uid) {
                 contactDiv.classList.add('active');
+            }
+
+            // Selection state
+            if (this.isSelectionMode && this.selectedChats.has(uid)) {
+                contactDiv.style.backgroundColor = 'rgba(0, 168, 132, 0.15)';
             }
 
             // Unread Count
@@ -2052,53 +2073,167 @@ gap: 8px;
             const isFav = this.favourites && this.favourites.has(uid);
             const favStarHTML = isFav ? '<i class="material-icons favourite-star" style="font-size: 14px; color: #fbbf24; margin-left: 4px;">star</i>' : '';
 
-            // Set data attributes for filtering
-            contactDiv.dataset.favorite = isFav ? 'true' : 'false';
-            contactDiv.dataset.unread = unread > 0 ? 'true' : 'false';
+            // Checkbox HTML for selection mode
+            const checkboxHTML = this.isSelectionMode ? `
+                <div style="margin-right: 12px; display: flex; align-items: center justify-content: center;">
+                    <i class="material-icons" style="color: ${this.selectedChats.has(uid) ? '#00a884' : '#8696a0'}; font-size: 24px;">
+                        ${this.selectedChats.has(uid) ? 'check_box' : 'check_box_outline_blank'}
+                    </i>
+                </div>
+            ` : '';
+
+            // Menu button only if NOT in selection mode
+            const menuBtnHTML = !this.isSelectionMode ? `
+                <div class="contact-menu-btn" data-menu-btn="true">
+                    <i class="material-icons" style="font-size: 20px;">more_vert</i>
+                </div>
+            ` : '';
 
             contactDiv.innerHTML = `
+                ${checkboxHTML}
                 <div class="contact-avatar">
                     <img src="${contact.profilePicture || 'anony.jpg'}" alt="${contact.name}">
                 </div>
                 <div class="contact-info">
                     <div class="contact-name">${contact.name || contact.username}${favStarHTML}</div>
-                    <div class="contact-status">Click to chat</div>
+                    <div class="contact-status">${contact.lastMessage || 'Click to chat'}</div>
                 </div>
                 ${badgeHTML}
-                <div class="contact-menu-btn" data-menu-btn="true">
-                    <i class="material-icons" style="font-size: 20px;">more_vert</i>
-                </div>
+                ${menuBtnHTML}
             `;
 
-            // Get the menu button after innerHTML is set
-            const menuBtn = contactDiv.querySelector('.contact-menu-btn');
-            if (menuBtn) {
-                menuBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-                    this.showContextMenu(e, uid);
-                });
-
-                // Also handle touch events for mobile
-                menuBtn.addEventListener('touchend', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-                    this.showContextMenu(e, uid);
-                }, { passive: false });
-            }
-
-            contactDiv.addEventListener('click', (e) => {
-                // Don't open chat if clicking on menu button
-                if (e.target.closest('.contact-menu-btn')) {
-                    return;
+            if (!this.isSelectionMode) {
+                // Regular interaction
+                const menuBtn = contactDiv.querySelector('.contact-menu-btn');
+                if (menuBtn) {
+                    menuBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+                        this.showContextMenu(e, uid);
+                    });
+                    // Touch support
+                    menuBtn.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+                        this.showContextMenu(e, uid);
+                    }, { passive: false });
                 }
-                this.openChatWithPeer(contact);
-            });
+
+                contactDiv.addEventListener('click', (e) => {
+                    if (e.target.closest('.contact-menu-btn')) return;
+                    this.openChatWithPeer(contact);
+                });
+            } else {
+                // Selection interaction
+                contactDiv.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    this.toggleChatSelection(uid);
+                });
+            }
 
             contactsList.appendChild(contactDiv);
         });
+    }
+
+    // --- GLOBAL MENU & SELECTION FUNCTIONS ---
+
+    toggleMainMenu() {
+        const menu = document.getElementById('main-menu-dropdown');
+        if (menu) {
+            const isVisible = menu.style.display === 'block';
+            menu.style.display = isVisible ? 'none' : 'block';
+
+            if (!isVisible) {
+                // Close on click outside
+                const closeMenu = (e) => {
+                    // Start checking a bit later to avoid immediate trigger
+                    if (!e.target.closest('#main-menu-dropdown') && !e.target.closest('[onclick*="toggleMainMenu"]')) {
+                        menu.style.display = 'none';
+                        document.removeEventListener('click', closeMenu);
+                    }
+                };
+                setTimeout(() => document.addEventListener('click', closeMenu), 10);
+            }
+        }
+    }
+
+    toggleSelectionMode(enable) {
+        this.isSelectionMode = enable;
+
+        // UI Elements
+        const normalHeader = document.querySelector('#contacts-list').previousElementSibling.previousElementSibling; // contacts-header
+        const selectionHeader = document.getElementById('contacts-selection-header');
+
+        // This is fragile. Let's find by class or ID if possible. 
+        // We know contacts-header is the first child of chat-contacts usually.
+        // Let's use specific queries.
+        const headers = document.querySelectorAll('.contacts-header');
+        if (headers.length >= 2) {
+            // 0 is usually normal, 1 is selection (if we inserted strictly after)
+            // But let's rely on ID for selection header
+            const selHeader = document.getElementById('contacts-selection-header');
+            // The other one is the one containing 'SynqX Chats'
+            const mainHeader = Array.from(headers).find(h => h.id !== 'contacts-selection-header');
+
+            if (enable) {
+                if (mainHeader) mainHeader.style.display = 'none';
+                if (selHeader) selHeader.style.display = 'flex';
+                this.selectedChats.clear();
+                this.updateSelectionHeader();
+            } else {
+                if (mainHeader) mainHeader.style.display = 'flex';
+                if (selHeader) selHeader.style.display = 'none';
+                this.selectedChats.clear();
+            }
+        }
+
+        this.updateContactsList();
+    }
+
+    toggleChatSelection(uid) {
+        if (this.selectedChats.has(uid)) {
+            this.selectedChats.delete(uid);
+        } else {
+            this.selectedChats.add(uid);
+        }
+        this.updateSelectionHeader();
+        this.updateContactsList(); // Re-render to show checks active
+    }
+
+    updateSelectionHeader() {
+        const countSpan = document.getElementById('selection-count');
+        const deleteBtn = document.getElementById('delete-selected-btn');
+
+        if (countSpan) countSpan.textContent = `${this.selectedChats.size} selected`;
+
+        if (deleteBtn) {
+            deleteBtn.style.display = this.selectedChats.size > 0 ? 'flex' : 'none';
+        }
+    }
+
+    confirmDeleteSelected() {
+        if (this.selectedChats.size === 0) return;
+
+        if (confirm(`Delete ${this.selectedChats.size} selected chats? This cannot be undone.`)) {
+            this.selectedChats.forEach(uid => {
+                this.deleteChat(uid, true); // true = silent/bulk mode if supported, or just call normal
+            });
+            this.toggleSelectionMode(false);
+            this.showNotification('Chats deleted', 'success');
+        }
+    }
+
+    confirmClearAllHistory() {
+        if (confirm('Are you sure you want to delete ALL chat history? This will remove all contacts and messages permanently.')) {
+            // Iterate all contacts and delete
+            const contacts = Array.from(this.contacts.keys());
+            contacts.forEach(uid => this.deleteChat(uid));
+            this.showNotification('All history cleared', 'success');
+        }
     }
 
 
@@ -2249,8 +2384,41 @@ gap: 8px;
             } else {
                 // On desktop: position near cursor
                 menu.style.display = 'block';
-                menu.style.top = `${event.clientY}px`;
-                menu.style.left = `${event.clientX - 160}px`;
+
+                // Calculate dimensions to prevent off-screen rendering
+                const menuHeight = menu.offsetHeight || 300; // Fallback estimate
+                const menuWidth = menu.offsetWidth || 200;
+
+                let topPos = event.clientY;
+                let leftPos = event.clientX;
+
+                // Vertical Check: flip up if not enough space below
+                if (topPos + menuHeight > window.innerHeight) {
+                    topPos = event.clientY - menuHeight;
+                    // Ensure it doesn't go off top
+                    if (topPos < 0) topPos = 10;
+                }
+
+                // Horizontal Check: flip left if not enough space right
+                // Default behavior was clientX - 160, assuming we want it slightly left of cursor
+                if (leftPos + menuWidth > window.innerWidth) {
+                    leftPos = window.innerWidth - menuWidth - 10;
+                } else {
+                    // Slight offset to not block cursor directly
+                    leftPos = event.clientX + 5;
+                }
+
+                // Adjust for specific sidebar behavior (original code had -160 offset)
+                // If the click is in the sidebar (left side of screen), we want the menu to appear properly
+                if (event.clientX < 350) { // Assuming sidebar is roughly 350px
+                    // Try to behave like a standard context menu (right of cursor if space)
+                    if (event.clientX + menuWidth < window.innerWidth) {
+                        leftPos = event.clientX;
+                    }
+                }
+
+                menu.style.top = `${topPos}px`;
+                menu.style.left = `${leftPos}px`;
                 menu.style.bottom = 'auto';
                 menu.style.right = 'auto';
 
@@ -2362,9 +2530,16 @@ gap: 8px;
                 }
             });
 
+            const contactsRef = window.messageRouter.database.ref(`contacts/${this.currentUser.uid}`);
+
             if (Object.keys(contactsObj).length > 0) {
-                window.messageRouter.database.ref(`contacts/${this.currentUser.uid}`).update(contactsObj)
+                // Use set() instead of update() to ensure deletions are synced (removes keys not present)
+                contactsRef.set(contactsObj)
                     .catch(e => console.error('Error syncing contacts to Firebase:', e));
+            } else {
+                // If contacts list is empty, remove the node entirely so it doesn't leave orphans
+                contactsRef.remove()
+                    .catch(e => console.error('Error clearing contacts in Firebase:', e));
             }
         }
     }
@@ -2411,13 +2586,7 @@ gap: 8px;
                     }
                 });
 
-                // Save cleaned connection list (Update ONLY local storage to avoid loop)
-                if (this.contacts.size !== rawContacts.length) {
-                    const cleaned = Array.from(this.contacts.entries());
-                    localStorage.setItem(storageKey, JSON.stringify(cleaned));
-                    console.log('🧹 cleanup: Removed duplicate/invalid contacts');
-                }
-
+                // Render local cache first for speed
                 this.updateContactsList();
             } catch (error) {
                 console.error('Error loading contacts:', error);
@@ -2433,25 +2602,33 @@ gap: 8px;
                 const snapshot = await window.messageRouter.database.ref(`contacts/${this.currentUser.uid}`).once('value');
                 const remoteContacts = snapshot.val();
 
+                // FORCE SYNC: Overwrite local contacts with Firebase data to ensure exact match
+                // This handles deletions: if it's not in Firebase, it shouldn't be here.
                 if (remoteContacts) {
+                    this.contacts = new Map(); // Clear local state
                     let updated = false;
+
                     Object.entries(remoteContacts).forEach(([uid, contact]) => {
-                        if (!this.contacts.has(uid)) {
-                            this.contacts.set(uid, contact);
-                            updated = true;
-                        } else {
-                            // Optional: Update local contact with fresh data if needed
-                            // const local = this.contacts.get(uid);
-                            // if (contact.lastRead > local.lastRead) ...
-                        }
+                        this.contacts.set(uid, contact);
+                        updated = true;
                     });
 
+                    console.log('☁️ Synced contacts from Firebase (Overwriting local)');
+
                     if (updated) {
-                        console.log('☁️ Synced contacts from Firebase');
                         this.updateContactsList();
-                        // Save merged list to local storage (user-specific key)
+                        // Save updated list to local storage
                         const contactsData = Array.from(this.contacts.entries());
                         localStorage.setItem(storageKey, JSON.stringify(contactsData));
+                    }
+
+                } else {
+                    // Firebase has no contacts, but we have local? Clear local.
+                    if (this.contacts.size > 0) {
+                        console.log('☁️ Firebase has no contacts - clearing local list');
+                        this.contacts = new Map();
+                        this.updateContactsList();
+                        localStorage.setItem(storageKey, JSON.stringify([]));
                     }
                 }
             } catch (e) {

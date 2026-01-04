@@ -151,6 +151,10 @@ console.log('📱 Mobile UI Module Loaded');
     document.addEventListener('click', (e) => {
         const contactItem = e.target.closest('.contact-item');
         if (contactItem && isMobile()) {
+            // Check for selection mode - Do NOT open chat if selecting
+            if (window.fireflyChat && window.fireflyChat.isSelectionMode) {
+                return;
+            }
             // Immediate trigger
             window.showMobileChat();
         }
